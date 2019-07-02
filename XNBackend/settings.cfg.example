@@ -1,0 +1,21 @@
+from datetime import timedelta
+
+DEBUG=True
+
+
+WTF_CSRF_SECRET_KEY = SECRET_KEY = 'aaaabbbccddefg'
+
+JWT_SECRET_KEY='qazxcvbnmklpoiuytrewsdfghjk'
+JWT_AUTH_URL_RULE=None
+JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=7)
+
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://test:test@127.0.0.1:3306/wf?charset=utf8mb4'
+SQLALCHEMY_TRACK_MODIFICATIONS=False
+
+JWT_EXPIRATION_DELTA = timedelta(seconds=60*60*24)
+
+
+LOG_DIR = './'
+BUNDLE_ERRORS = True
+MAX_CONTENT_LENGTH = 16*1024*1024
+WFDashboard

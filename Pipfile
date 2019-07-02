@@ -1,0 +1,26 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+pep8 = "*"
+flake8 = "*"
+pylint = "*"
+
+[packages]
+requests = "*"
+flask = "*"
+flask-env = "*"
+flask-compress = "*"
+flask-log-request-id = "*"
+coloredlogs = "*"
+flask-bcrypt = "*"
+flask-caching = "*"
+flask-restful = "*"
+flask-jwt-extended = "*"
+flask-sqlalchemy = "*"
+flask-restless = "*"
+
+[requires]
+python_version = "3.6"

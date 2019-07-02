@@ -1,0 +1,9 @@
+include *.txt
+graft WFDashboard/static
+graft WFDashboard/templates
+recursive-include WFDashboard *.example *.txt
+recursive-exclude . *.cfg
+recursive-include deployment *
+recursive-include migrations *
+global-exclude *.pyc
+

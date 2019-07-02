@@ -1,0 +1,15 @@
+[Unit]
+Description=Admin Dashboard For WF
+after=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=ser
+PIDFile=/var/run/wfds.pid
+WorkingDirectory=/home/ser/wf-dashboard
+ExecStart= /home/ser/.local/share/virtualenvs/wf-dashboard-OaJQElPa/bin/gunicorn --chdir /home/ser/wf-dashboard -c /etc/wfds/gunicorn.conf WFDashboard.app.entry:app
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=on-failure
