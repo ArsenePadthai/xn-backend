@@ -154,3 +154,6 @@ tags
 
 # debug database files
 *.db
+
+# custom
+local_ENV_set_script.bat

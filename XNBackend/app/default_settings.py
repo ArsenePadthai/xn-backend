@@ -36,8 +36,6 @@ class DefaultConfiguration(metaclass=MetaFlaskEnv):
     JWT_AUTH_URL_RULE = None
     JWT_EXPIRATION_DELTA = timedelta(seconds=60*60*24)
 
-    DEBUG_API_REQUEST = False
-
     LIST_FETCH_LIMIT_LEN = 15
 
     MEMCACHED_SERVER = None

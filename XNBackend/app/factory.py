@@ -14,7 +14,7 @@ def create_app(config_filename=None):
     app = Flask(__name__, static_folder='../static', template_folder='../templates')
     app.wsgi_app = SaferProxyFix(app.wsgi_app)
     app.config.from_object('XNBackend.app.default_settings.DefaultConfiguration')
-    app.config.from_envvar('WF_SETTINGS')
+    app.config.from_envvar('XN_SETTINGS')
     if config_filename:
         app.config.from_pyfile(config_filename)
 

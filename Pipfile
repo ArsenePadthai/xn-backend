@@ -21,6 +21,7 @@ flask-restful = "*"
 flask-jwt-extended = "*"
 flask-sqlalchemy = "*"
 flask-restless = "*"
+celery = "*"
 
 [requires]
 python_version = "3.6"
