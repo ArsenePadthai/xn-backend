@@ -1,0 +1,15 @@
+[Unit]
+Description=Restart celery worker1
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/xn-backend
+Environment=XN_SETTINGS=../settings.cfg
+ExecStart=/home/ubuntu/.local/share/virtualenvs/xn-backend-InHQO0Yz/bin/celery -A XNBackend.app worker -n worker1@%n -Q first
+ExecStartPost=/home/ubuntu/.local/share/virtualenvs/xn-backend-InHQO0Yz/bin/python3.6 -m XNBackend.tcp.client_modbus
+Restart=always
+RestartSec=100ms
+
+[Install]
+WantedBy=multi-user.target

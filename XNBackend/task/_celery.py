@@ -25,7 +25,7 @@ class FlaskCelery(Celery):
         # class ContextTask(TaskBase):
         def _task_call__(self, *_args, **_kwargs):
             if _celery.flask_app is None:
-                from TelecomMonitorWebTool.app.factory import create_app
+                from XNBackend.app.factory import create_app
                 _celery.flask_app = create_app()
             with _celery.flask_app.app_context():
                 return o_call(self, *_args, **_kwargs)

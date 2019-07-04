@@ -1,16 +1,23 @@
-# -*- encoding: utf-8 -*-
-from datetime import datetime
-
-from WFDashboard.modal.module import Module
-from WFDashboard.task import celery
+from XNBackend.task import celery
 
 
 @celery.task()
 def add_together(a, b):
-    print(datetime.now(), 'enter add')
-    print(datetime.now(), 'start query')
-    x = Module.query.count()
-    print(datetime.now(), 'end query')
-    ans = a + b + x
-    print(datetime.now(), 'leave add')
-    return ans
+    return a + b
+
+
+@celery.task()
+def sub_together(a, b):
+    return a - b
+
+
+@celery.task()
+def mul_together(a, b):
+    return a * b
+
+
+@celery.task()
+def div_together(a, b):
+    return a / b
+
+
