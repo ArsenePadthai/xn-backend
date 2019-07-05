@@ -10,10 +10,10 @@
 ### Setup
 
 ```shell
-git clone https://bitbucket.org/huangloong/wf-dashboard.git
-cd wf-dashboard
+git clone https://bitbucket.org/huangloong/xn-backend.git
+cd xn-backend
 pipenv install
-cp WFDashboard/settings.cfg.example WFDashboard/settings.cfg
+cp XNBackend/settings.cfg.example XNBackend/settings.cfg
 ```
 
 
@@ -23,8 +23,8 @@ cp WFDashboard/settings.cfg.example WFDashboard/settings.cfg
 ### Linux
 
 ```shell
-export WF_SETTINGS=../settings.cfg
-export FLASK_APP=WFDashboard.app.entry
+export XN_SETTINGS=../settings.cfg
+export FLASK_APP=XNBackend.app.entry
 pipenv run flask run
 ```
 
@@ -33,8 +33,8 @@ pipenv run flask run
 ### Windows CMD
 
 ```powershell
-SET WF_SETTINGS=../settings.cfg
-SET FLASK_APP=WFDashboard.app.entry
+SET XN_SETTINGS=../settings.cfg
+SET FLASK_APP=XNBackend.app.entry
 pipenv run flask run
 ```
 

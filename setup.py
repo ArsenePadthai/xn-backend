@@ -34,7 +34,7 @@ if os.path.isdir('migrations'):
         migration_files.setdefault(os.path.split(f)[0], list()).append(f)
 
 setup(
-    name='WFDashboard',
+    name='XNBackend',
     version='1.0',
     long_description=__doc__,
     packages=find_packages(),
@@ -47,7 +47,7 @@ setup(
     author_email='rd@huangloong.com',
     entry_points={
         'console_scripts': [
-            'wf-dashboard=WFDashboard.cli:cli'
+            'xn-backend=XNBackend.cli:cli'
         ],
     },
 )
