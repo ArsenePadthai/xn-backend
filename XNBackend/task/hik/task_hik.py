@@ -1,4 +1,5 @@
 import socket
+import random
 from XNBackend.task import celery
 
 
@@ -27,14 +28,17 @@ def send_to_hik(data):
     except OSError:
         celery.control.broadcast('shutdown', destination=['worker1@xn-hik.service'])
         hik_client = None
+    data_byte = client.recv(1024)
+    return data_byte
 
     
 @celery.task()
-def add_together(a, b):
-    data = a + b
-    send_to_hik(data)
-    return data 
-   
+def network_relay_query():
+    id_bytes = bytes.fromhex(hex(random.randint(1, 65535))[2:].rjust(4, '0'))
+    data = bytes.fromhex('CC') + id_bytes + bytes.fromhex('FE EE')
+    message = send_to_hik(data)
+    return str(message)   
+
  
 @celery.task()
 def sub_together(a, b):
