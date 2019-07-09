@@ -36,7 +36,7 @@ class Locators(db.Model, TimeObj):
     internal_code = db.Column(Unicode, primary_key=True)
     description = db.Column(String(LARGE_LEN))
     floor = db.Column(Integer)
-    zoon = db.Column(Integer)
+    zone = db.Column(Integer)
     # coorX, and coorY may not necessary
     coorX = db.Column(Float, nullable=True)
     coorY = db.Column(Float, nullable=True)
@@ -132,7 +132,7 @@ class CircuitAlarms(db.Model, TimeObj):
     alarm_id = db.Column(Integer, primary_key=True)
     addr = db.Column(Integer)
     node = db.Column(String)
-    circuit_type = db.Column(String)
+    alarm_type = db.Column(String(SMALL_LEN))
     info = db.Colum(String)
     type_number = db.Column(SmallInteger)
 
@@ -157,6 +157,8 @@ class LatestAlarm(db.Model, TimeObj):
                            ondelete='CASCADE', index=True)
     circuit_alarm_id = db.Column(Integer, ForeignKey(CircuitAlarms.id),
                                  ondelete='SET NULL')
+    circuit = relationship('CircuitBreaker')
+    alarm = relationship('CircuitAlarms')
 
 
 class EnergyConsumeDaily(db.Model, TimeObj):
@@ -182,7 +184,7 @@ class EnegyConsumeMonthly(db.Model, TimeObj):
 class IRSensorStatus(db.Model, TimeObj):
     id = db.Column(Integer, primary_key=True)
     sensor_id = db.Column(Integer)
-    status = db.Column(BOOLEAN)
+    value = db.Column(BOOLEAN)
 
 
 # TODO 是查询还是推送
