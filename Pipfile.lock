@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "3764fc0ea5934a36590b6e748110cfbe1d17ad36dd8a0477a1bfdd2207da847b"
+            "sha256": "4bfa2d5b9fcc5a091215995fa8925b4d0d305bdee6da831f532e305fea4ca5da"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -129,11 +129,11 @@
         },
         "flask": {
             "hashes": [
-                "sha256:a31adc27de06034c657a8dc091cc5fcb0227f2474798409bff0e9674de31a026",
-                "sha256:b5ae63812021cb04174fcff05d560a98387a44d9cccd4652a2bfa131ba4e4c9b"
+                "sha256:13f9f196f330c7c2c5d7a5cf91af894110ca0215ac051b5844701f2bfd934d52",
+                "sha256:45eb5a6fd193d6cf7e0cf5d8a5b31f83d5faae0293695626f539a823e93b13f6"
             ],
             "index": "pypi",
-            "version": "==1.1.0"
+            "version": "==1.1.1"
         },
         "flask-bcrypt": {
             "hashes": [
@@ -203,6 +203,10 @@
             "index": "pypi",
             "version": "==2.4.0"
         },
+        "hikvision-auth": {
+            "git": "https://bitbucket.org/huangloong/hikvision-auth.git",
+            "ref": "5038444119d02b7eb1350894e662baa24284f9a0"
+        },
         "humanfriendly": {
             "hashes": [
                 "sha256:23057b10ad6f782e7bc3a20e3cb6768ab919f619bbdc0dd75691121bbde5591d",
@@ -237,6 +241,10 @@
                 "sha256:eb365ea795cd7e629ba2f1f398e0c3ba354b91ef4de225ffdf6ab45fdfc7d581"
             ],
             "version": "==4.6.3"
+        },
+        "mantunsci-auth": {
+            "git": "https://bitbucket.org/huangloong/mantunsci-auth.git",
+            "ref": "ae1fd233ba52916977b725f04422f5f4c43119e7"
         },
         "markupsafe": {
             "hashes": [
@@ -387,11 +395,11 @@
         },
         "flake8": {
             "hashes": [
-                "sha256:859996073f341f2670741b51ec1e67a01da142831aa1fdc6242dbf88dffbe661",
-                "sha256:a796a115208f5c03b18f332f7c11729812c8c3ded6c46319c59b53efd3819da8"
+                "sha256:19241c1cbc971b9962473e4438a2ca19749a7dd002dd1a946eaba171b4114548",
+                "sha256:8e9dfa3cecb2400b3738a42c54c3043e821682b9c840b0448c0503f781130696"
             ],
             "index": "pypi",
-            "version": "==3.7.7"
+            "version": "==3.7.8"
         },
         "isort": {
             "hashes": [

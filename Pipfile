@@ -24,6 +24,8 @@ flask-restless = "*"
 celery = "*"
 redis = "*"
 marshmallow = "*"
+mantunsci-auth = {git = "https://bitbucket.org/huangloong/mantunsci-auth.git"}
+hikvision-auth = {git = "https://bitbucket.org/huangloong/hikvision-auth.git"}
 
 [requires]
 python_version = "3.6"
