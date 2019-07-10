@@ -34,15 +34,18 @@ def illum_send(address, data):
 bind_ip = "0.0.0.0"
 bind_port = 51113
 
-server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-server.bind((bind_ip,bind_port))
-server.listen(5)
-client,addr = server.accept()
-while True:
-    print("[*] Acception connection from %s:%d" % (addr[0],addr[1]))
-    data = client.recv(1024)
-    print(data)
-    relay_send('00 04', '01 01 00 EE')
+try:
+    server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    server.bind((bind_ip,bind_port))
+    server.listen(5)
+    client,addr = server.accept()
+    while True:
+        print("[*] Acception connection from %s:%d" % (addr[0],addr[1]))
+        data = client.recv(1024)
+        print(data)
+        relay_send('00 04', '01 01 00 EE')
+except Exception:
+    server.close()
 
 
 '''

@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "84fcf3fb5a5de3bdfe87c663c15d344c942adf24cb2a025bc289be7a98fa1c25"
+            "sha256": "b0e6df352018ebf2412212bb8bc29ea3c49c6f644b48de57f03164bdf8ad5249"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,6 +16,13 @@
         ]
     },
     "default": {
+        "alembic": {
+            "hashes": [
+                "sha256:cdb7d98bd5cbf65acd38d70b1c05573c432e6473a82f955cdea541b5c153b0cc"
+            ],
+            "index": "pypi",
+            "version": "==1.0.11"
+        },
         "amqp": {
             "hashes": [
                 "sha256:aa4409446139676943a2eaa27d5f58caf750f4ca5a89f888c452afd86be6a67d",
@@ -211,6 +218,10 @@
             "index": "pypi",
             "version": "==2.4.0"
         },
+        "hikvision-auth": {
+            "git": "https://bitbucket.org/huangloong/hikvision-auth.git",
+            "ref": "5038444119d02b7eb1350894e662baa24284f9a0"
+        },
         "humanfriendly": {
             "hashes": [
                 "sha256:23057b10ad6f782e7bc3a20e3cb6768ab919f619bbdc0dd75691121bbde5591d",
@@ -245,6 +256,16 @@
                 "sha256:eb365ea795cd7e629ba2f1f398e0c3ba354b91ef4de225ffdf6ab45fdfc7d581"
             ],
             "version": "==4.6.3"
+        },
+        "mako": {
+            "hashes": [
+                "sha256:95ee720cc3453063788515d55bd7ce4a2a77b7b209e4ac70ec5c86091eb02541"
+            ],
+            "version": "==1.0.13"
+        },
+        "mantunsci-auth": {
+            "git": "https://bitbucket.org/huangloong/mantunsci-auth.git",
+            "ref": "ae1fd233ba52916977b725f04422f5f4c43119e7"
         },
         "markupsafe": {
             "hashes": [
@@ -319,6 +340,14 @@
                 "sha256:c89805f6f4d64db21ed966fda138f8a5ed7a4fdbc1a8ee329ce1b74e3c74da9e"
             ],
             "version": "==2.8.0"
+        },
+        "python-editor": {
+            "hashes": [
+                "sha256:1bf6e860a8ad52a14c3ee1252d5dc25b2030618ed80c022598f00176adc8367d",
+                "sha256:51fda6bcc5ddbbb7063b2af7509e43bd84bfc32a4ff71349ec7847713882327b",
+                "sha256:5f98b069316ea1c2ed3f67e7f5df6c0d8f10b689964a4a811ff64f0106819ec8"
+            ],
+            "version": "==1.0.4"
         },
         "python-mimeparse": {
             "hashes": [

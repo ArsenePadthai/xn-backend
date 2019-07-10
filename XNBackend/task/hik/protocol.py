@@ -9,7 +9,7 @@ from XNBackend.task.hik.parser import Parsable, ParsableMeta, Marshallable, Unma
 L = logging.getLogger(__name__)
 
 
-def header(bs:bytes):
+def data_parse(bs:bytes):
     header_info = {'bb':NetworkRelayData, 'db':InfraredSensorData, 'dd':AQISensorData, 'df':IlluminationSensorData}
     start_code_byte, body = bs[:1], bs[1:-1]
     start_code = str(binascii.b2a_hex(start_code_byte))[2:-1]

@@ -9,5 +9,5 @@ from XNBackend.task.hik.protocol import *
 def test():
     data = network_relay_query.delay().get()
     data_byte = eval(data)
-    message = header(data_byte)
+    message = data_parse(data_byte)
     return jsonify({"hello":"world", 'data':str(message)})
