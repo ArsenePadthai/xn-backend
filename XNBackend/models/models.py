@@ -2,7 +2,8 @@
 from .base import db
 
 from sqlalchemy import ForeignKey, Unicode, BOOLEAN, TIMESTAMP, String, \
-    SmallInteger, Integer, Float, relationship
+    SmallInteger, Integer, Float
+from sqlalchemy.orm import relationship
 
 SMALL_LEN = 30
 MEDIUM_LEN = 50
@@ -133,7 +134,7 @@ class CircuitAlarms(db.Model, TimeObj):
     addr = db.Column(Integer)
     node = db.Column(String)
     alarm_type = db.Column(String(SMALL_LEN))
-    info = db.Colum(String)
+    info = db.Column(String)
     type_number = db.Column(SmallInteger)
 
     @property
@@ -171,7 +172,7 @@ class EnergyConsumeDaily(db.Model, TimeObj):
     # total_electricity = db.Column(Float)
 
 
-class EnegyConsumeMonthly(db.Model, TimeObj):
+class EnergyConsumeMonthly(db.Model, TimeObj):
     consume_id = db.Column(Integer, primary_key=True)
     circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id,
                                                     ondelete='CASCADE'))
@@ -204,7 +205,7 @@ class AQIValues(db.Model, TimeObj):
     sensor_id = db.Column(Integer)
     temperature = db.Column(Float)
     humidity = db.Column(Float)
-    pm25 = db.Colum(Float)
+    pm25 = db.Column(Float)
     co2 = db.Column(Float)
     tvoc = db.Column(Float)
     voc = db.Column(Float)

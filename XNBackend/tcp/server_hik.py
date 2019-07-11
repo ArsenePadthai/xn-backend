@@ -12,14 +12,14 @@ def relay_send(id, data):
 
 def infrared_send(address, data):
     data0_bytes = bytes.fromhex('DB')
-    data1_bytes = data1.encode()
+    data1_bytes = address.encode()
     data2_bytes = bytes.fromhex(data)
     client.send(data0_bytes+data1_bytes+data2_bytes) 
     
 
 def aqi_send(address, data):
     data0_bytes = bytes.fromhex('DD')
-    data1_bytes = data1.encode()
+    data1_bytes = address.encode()
     data2_bytes = bytes.fromhex(data)
     client.send(data0_bytes+data1_bytes+data2_bytes) 
     
@@ -48,8 +48,3 @@ except Exception:
     server.close()
 
 
-'''
-    data0 = 'DF'
-    data1 = '000A010101'
-    data2 = '00 00 00 00 10 11 EE'
-'''

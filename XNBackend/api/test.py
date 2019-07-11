@@ -7,7 +7,5 @@ from XNBackend.task.hik.protocol import *
 
 @api_bp.route('/test', methods=['GET'])
 def test():
-    data = network_relay_query.delay().get()
-    data_byte = eval(data)
-    message = data_parse(data_byte)
-    return jsonify({"hello":"world", 'data':str(message)})
+    network_relay_query.delay()
+    return jsonify({"hello":"world"})

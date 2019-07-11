@@ -33,10 +33,11 @@ CELERY_QUEUES = (
 
 CELERY_ROUTES = {
     'XNBackend.task.hik.task_hik.network_relay_query':{"queue":"first", "routing_key":"first"},
-    'XNBackend.task.hik.task_hik.sub_together':{"queue":"first", "routing_key":"first"},
-#    'XNBackend.task.add.mul_together':{"queue":"second", "routing_key":"second"},
-#    'XNBackend.task.add.div_together':{"queue":"second", "routing_key":"second"},
+    'XNBackend.task.hik.task_hik.':{"queue":"first", "routing_key":"first"},
+    'XNBackend.task.mantunsci.task.power_month':{"queue":"second", "routing_key":"second"},
+    'XNBackend.task.mantunsci.task.power_day':{"queue":"second", "routing_key":"second"},
+    'XNBackend.task.mantunsci.task.power_current':{"queue":"second", "routing_key":"second"},
 }
 
-TASK_REJECT_ON_WORKER_LOST = True
-TASK_ACKS_LATE = True
+#TASK_REJECT_ON_WORKER_LOST = True
+#TASK_ACKS_LATE = True

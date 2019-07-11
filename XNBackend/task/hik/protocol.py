@@ -14,7 +14,7 @@ def data_parse(bs:bytes):
     start_code_byte, body = bs[:1], bs[1:-1]
     start_code = str(binascii.b2a_hex(start_code_byte))[2:-1]
     data = header_info[start_code].parse(body)
-    return data
+    return data[0]
 
 
 class NetworkRelayData(Parsable, Marshallable):

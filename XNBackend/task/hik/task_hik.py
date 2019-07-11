@@ -1,6 +1,8 @@
 import socket
 import random
 from XNBackend.task import celery
+from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors 
+from sqlalchemy.dialects.mysql import insert
 
 
 target_host = "127.0.0.1" 
@@ -38,12 +40,35 @@ def network_relay_query():
     id_bytes = bytes.fromhex(hex(random.randint(1, 65535))[2:].rjust(4, '0'))
     data = bytes.fromhex('CC') + id_bytes + bytes.fromhex('FE EE')
     message = send_to_hik(data)
-    return str(message)
+    network_data = data_parse(message)
+    # network_record = 
+    return str(network_data)
 
  
 @celery.task()
-def sub_together(a, b):
-    data = a - b
-    send_to_hik(data)
-    return data 
+def IR_sensor_query():
+    data = bytes.fromhex('DA') + '000AAD2A33'.encode() + bytes.fromhex('86 86 86 EE')
+    message = send_to_hik(data)
+    ir_data = data_parse(message)
+    # ir_record = IRSensorStatus()
+    return str(ir_data)
+
+
+@celery.task()
+def AQI_sensor_query():
+    data = bytes.fromhex('DC') + '000AAD2A33'.encode() + bytes.fromhex('86 86 86 EE')
+    message = send_to_hik(data)
+    aqi_data = data_parse(message)
+    aqi_record = AQIValues()
+    return str(aqi_data)
+
+
+@celery.task()
+def Lux_sensor_query():
+    data = bytes.fromhex('DF') + '000AAD2A33'.encode() + bytes.fromhex('86 86 86 EE')
+    message = send_to_hik(data)
+    lux_data = data_parse(message)
+    lux_record = LuxValues()
+    return str(lux_data)
+
 
