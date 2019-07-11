@@ -5,9 +5,9 @@ from sqlalchemy import ForeignKey, Unicode, BOOLEAN, TIMESTAMP, String, \
     SmallInteger, Integer, Float
 from sqlalchemy.orm import relationship
 
-SMALL_LEN = 30
+SHORT_LEN = 30
 MEDIUM_LEN = 50
-LARGE_LEN = 100
+LONG_LEN = 100
 
 
 class TimeObj:
@@ -16,6 +16,7 @@ class TimeObj:
 
 
 class Users(db.Model, TimeObj):
+    __tablename__ = 'users'
     '''sync from hik'''
     id = db.Column(Integer, primary_key=True)
     person_id = db.Column(Unicode, index=True)
@@ -26,25 +27,28 @@ class Users(db.Model, TimeObj):
     org_name = db.Column(String(MEDIUM_LEN))
     certificate_type = db.Column(Integer)
     certificate_no = db.Column(String(MEDIUM_LEN))
-    phone_no = db.Column(String(SMALL_LEN))
-    address = db.Column(String(LARGE_LEN))
+    phone_no = db.Column(String(SHORT_LEN))
+    address = db.Column(String(LONG_LEN))
     email = db.Column(String(MEDIUM_LEN))
     education = db.Column(SmallInteger)
     nation = db.Column(SmallInteger)
+    photo_url = db.Column(String(LONG_LEN))
 
 
 class Locators(db.Model, TimeObj):
+    __tablename__ = 'locators'
     internal_code = db.Column(Unicode, primary_key=True)
-    description = db.Column(String(LARGE_LEN))
+    description = db.Column(String(LONG_LEN))
     floor = db.Column(Integer)
     zone = db.Column(Integer)
-    # coorX, and coorY may not necessary
+    # coorX, coorY and coorZ may not necessary
     coorX = db.Column(Float, nullable=True)
     coorY = db.Column(Float, nullable=True)
     coorZ = db.Column(Float, nullable=True)
 
 
 class TrackingDevices(db.Model, TimeObj):
+    __tablename__ = 'tracking_devices'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode, index=True)
     name = db.Column(String(MEDIUM_LEN))
@@ -56,6 +60,7 @@ class TrackingDevices(db.Model, TimeObj):
 
 
 class AppearRecords(db.Model, TimeObj):
+    __tablename__ = 'appear_records'
     id = db.Column(Integer, primary_key=True)
     user_id = db.Column(Integer, ForeignKey(Users.id,
                                             ondelete='CASCADE'))
@@ -64,6 +69,7 @@ class AppearRecords(db.Model, TimeObj):
 
 
 class HeatMapSnapshots(db.Model, TimeObj):
+    __tablename__ = 'heatmap_snapshots'
     id = db.Column(Integer, primary_key=True)
     device_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
                                               ondelete="CASCADE"))
@@ -71,18 +77,24 @@ class HeatMapSnapshots(db.Model, TimeObj):
 
 
 class CircuitBreakers(db.Model, TimeObj):
+    __tablename__ = 'circuit_breakers'
     id = db.Column(Integer, primary_key=True)
     mac = db.Column(Unicode, index=True)
-    name = db.Column(String(SMALL_LEN))
-    phone = db.Column(String(SMALL_LEN))
+    name = db.Column(String(SHORT_LEN))
+    phone = db.Column(String(SHORT_LEN))
     locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
                                             ondelete='SET NULL'))
+    room = db.Column(String(SHORT_LEN))
+    unit = db.Column(String(SHORT_LEN))
 
 
 class CircuitRecords(db.Model, TimeObj):
+    __tablename__ = 'circuit_records'
     id = db.Column(Integer, primary_key=True)
     circuit_mac = db.Column(Unicode, ForeignKey(CircuitBreakers.mac,
                                                 ondelete='CASCADE'))
+    addr = db.Column(Integer)
+    title = db.Column(String)
     validity = db.Column(BOOLEAN)
     enable_netctr = db.Column(BOOLEAN)
     oc = db.Column(BOOLEAN)
@@ -121,6 +133,8 @@ class CircuitRecords(db.Model, TimeObj):
 
 
 class LatestCircuitRecord(db.Model):
+    __tablename__ = 'latest_circuit_record'
+    id = db.Column(Integer, primary_key=True)
     circuit_id = db.Column(Integer, ForeignKey(CircuitBreakers.id,
                                                ondelete='CASCADE'), index=True)
     circuit_record_id = db.Column(Integer, ForeignKey(CircuitRecords.id,
@@ -130,10 +144,11 @@ class LatestCircuitRecord(db.Model):
 
 
 class CircuitAlarms(db.Model, TimeObj):
+    __tablename__ = 'circuit_alarms'
     alarm_id = db.Column(Integer, primary_key=True)
     addr = db.Column(Integer)
     node = db.Column(String)
-    alarm_type = db.Column(String(SMALL_LEN))
+    alarm_type = db.Column(String(SHORT_LEN))
     info = db.Column(String)
     type_number = db.Column(SmallInteger)
 
@@ -154,6 +169,7 @@ class CircuitAlarms(db.Model, TimeObj):
 
 
 class LatestAlarm(db.Model, TimeObj):
+    __tablename__ = 'latest_alarms'
     circuit_id = db.Column(Integer, ForeignKey(CircuitBreakers.id),
                            ondelete='CASCADE', index=True)
     circuit_alarm_id = db.Column(Integer, ForeignKey(CircuitAlarms.id),
@@ -163,6 +179,7 @@ class LatestAlarm(db.Model, TimeObj):
 
 
 class EnergyConsumeDaily(db.Model, TimeObj):
+    __tablename__ = 'energy_consume_daily'
     consume_id = db.Column(Integer, primary_key=True)
     circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id,
                                                     ondelete='CASCADE'))
@@ -172,10 +189,10 @@ class EnergyConsumeDaily(db.Model, TimeObj):
     # total_electricity = db.Column(Float)
 
 
-class EnergyConsumeMonthly(db.Model, TimeObj):
+class EnegyConsumeMonthly(db.Model, TimeObj):
+    __tablename__ = 'energy_consume_monthly'
     consume_id = db.Column(Integer, primary_key=True)
-    circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id,
-                                                    ondelete='CASCADE'))
+    circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id))
     addr = db.Column(Integer)
     electricity = db.Column(Float)
     # 统计时刻电量, 单位 KWH
@@ -183,13 +200,17 @@ class EnergyConsumeMonthly(db.Model, TimeObj):
 
 
 class IRSensorStatus(db.Model, TimeObj):
+    __tablename__ = 'ir_sensor_status'
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer)
+    sensor_id = db.Column(Integer, ForeignKey("IRSensors.id",
+                                              ondelete="CASCADE"))
     value = db.Column(BOOLEAN)
+    sensor = relationship('IRSensors')
 
 
 # TODO 是查询还是推送
 class IRSensors(db.Model, TimeObj):
+    __tablename__ = 'ir_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode, index=True)
     locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
@@ -200,18 +221,22 @@ class IRSensors(db.Model, TimeObj):
 
 
 class AQIValues(db.Model, TimeObj):
+    __tablename__ = 'aqi_values'
     # 只有主动查询
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer)
+    sensor_id = db.Column(Integer, ForeignKey("AQISensors.id",
+                                              ondelete="CASCADE"))
     temperature = db.Column(Float)
     humidity = db.Column(Float)
     pm25 = db.Column(Float)
     co2 = db.Column(Float)
     tvoc = db.Column(Float)
     voc = db.Column(Float)
+    sensor = relationship('AQISensors')
 
 
 class AQISensors(db.Model, TimeObj):
+    __tablename__ = 'aqi_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode, Index=True)
     locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
@@ -222,13 +247,17 @@ class AQISensors(db.Model, TimeObj):
 
 
 class LuxValues(db.Model, TimeObj):
+    __tablename__ = 'lux_values'
     # 只有主动查询
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer)
+    sensor_id = db.Column(Integer, ForeignKey("LuxSensors.id",
+                                              ondelete='CASCADE'))
     value = db.Column(Float)
+    sensor = relationship('LuxSensors')
 
 
 class LuxSensors(db.Model, TimeObj):
+    __tablename__ = 'lux_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode, Index=True)
     locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
@@ -236,3 +265,62 @@ class LuxSensors(db.Model, TimeObj):
     latest_record_id = db.Column(Integer, ForeignKey(LuxValues.id,
                                                      ondelete="SET NULL"))
     latest_record = relationship('LuxValues')
+
+
+class FireAlarmStatus(db.Model, TimeObj):
+    __tablename__ = 'fire_alarm_status'
+    id = db.Column(Integer, primary_key=True)
+    sensor_id = db.Column(Integer, ForeignKey('FireAlarmSensors.id',
+                                              ondelete='CASCADE'))
+    value = db.Column(SmallInteger)
+    sensor = relationship('FireAlarmSensors')
+
+
+class FireAlarmSensors(db.Model, TimeObj):
+    __tablename__ = 'fire_alarm_sensors'
+    id = db.Column(Integer, primary_key=True)
+    device_index_code = db.Column(Unicode, Index=True)
+    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+                                            ondelete='SET NULL'))
+
+
+class SwitchStatus(db.Model, TimeObj):
+    __tablename__ = 'switch_status'
+    id = db.Column(Integer, primary_key=True)
+    sensor_id = db.Column(Integer, ForeignKey('Switches.id',
+                                              ondelete='CASCADE'))
+    value = db.Column(SmallInteger)
+    sensor = relationship('Switch')
+
+
+class Switches(db.Model, TimeObj):
+    __tablename__ = 'switch_status'
+    id = db.Column(Integer, primary_key=True)
+    device_index_code = db.Column(Unicode, Index=True)
+    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+                                            ondelete='SET NULL'))
+
+
+class ElevatorStatus(db.Model, TimeObj):
+    __tablename__ = 'elevator_status'
+    id = db.Column(Integer, primary_key=True)
+    elevator_id = db.Column(Integer, ForeignKey('Elevators.id',
+                                                ondelete='CASCADE'))
+    floor = db.Column(Integer)
+    direction = db.Column(SmallInteger)
+    elevator = relationship('Elevators')
+
+    @property
+    def direction(self):
+        mapping = {1:"up",
+                   2:"down",
+                   0:"stop"}
+        return mapping(self.direction)
+
+    
+class Elevators(db.Model, TimeObj):
+    __tablename__ = 'elevators'
+    id = db.Column(Integer, primary_key=True)
+    device_index_code = db.Column(Unicode, Index=True)
+    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+                                            ondelete='SET NULL'))
