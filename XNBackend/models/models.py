@@ -19,7 +19,7 @@ class Users(db.Model, TimeObj):
     __tablename__ = 'users'
     '''sync from hik'''
     id = db.Column(Integer, primary_key=True)
-    person_id = db.Column(Unicode, index=True)
+    person_id = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     job_no = db.Column(String(MEDIUM_LEN))
     gender = db.Column(SmallInteger)
     org_path = db.Column(String(MEDIUM_LEN))
@@ -37,7 +37,7 @@ class Users(db.Model, TimeObj):
 
 class Locators(db.Model, TimeObj):
     __tablename__ = 'locators'
-    internal_code = db.Column(Unicode, primary_key=True)
+    internal_code = db.Column(Unicode(length=MEDIUM_LEN), primary_key=True)
     description = db.Column(String(LONG_LEN))
     floor = db.Column(Integer)
     zone = db.Column(Integer)
@@ -50,10 +50,11 @@ class Locators(db.Model, TimeObj):
 class TrackingDevices(db.Model, TimeObj):
     __tablename__ = 'tracking_devices'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, index=True)
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     name = db.Column(String(MEDIUM_LEN))
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
-                                            ondelete='SET NULL'))
+    locator = db.Column(Unicode(length=MEDIUM_LEN), 
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
     status = db.Column(SmallInteger)
     # 0 means camera, 1 means acs
     device_type = db.Column(SmallInteger)
@@ -79,10 +80,10 @@ class HeatMapSnapshots(db.Model, TimeObj):
 class CircuitBreakers(db.Model, TimeObj):
     __tablename__ = 'circuit_breakers'
     id = db.Column(Integer, primary_key=True)
-    mac = db.Column(Unicode, index=True)
+    mac = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     name = db.Column(String(SHORT_LEN))
     phone = db.Column(String(SHORT_LEN))
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
                                             ondelete='SET NULL'))
     room = db.Column(String(SHORT_LEN))
     unit = db.Column(String(SHORT_LEN))
@@ -91,10 +92,10 @@ class CircuitBreakers(db.Model, TimeObj):
 class CircuitRecords(db.Model, TimeObj):
     __tablename__ = 'circuit_records'
     id = db.Column(Integer, primary_key=True)
-    circuit_mac = db.Column(Unicode, ForeignKey(CircuitBreakers.mac,
-                                                ondelete='CASCADE'))
+    circuit_breaker_id = db.Column(Integer, ForeignKey(CircuitBreakers.id,
+                                                       ondelete='CASCADE'))
     addr = db.Column(Integer)
-    title = db.Column(String)
+    title = db.Column(String(MEDIUM_LEN))
     validity = db.Column(BOOLEAN)
     enable_netctr = db.Column(BOOLEAN)
     oc = db.Column(BOOLEAN)
@@ -103,7 +104,7 @@ class CircuitRecords(db.Model, TimeObj):
     mxgg = db.Column(Float)
     mxgl = db.Column(Float)
     line_type = db.Column(SmallInteger)
-    spec = db.Column(String)
+    spec = db.Column(String(MEDIUM_LEN))
     control = db.Column(BOOLEAN)
     visibility = db.Column(BOOLEAN)
     alarm = db.Column(Integer)
@@ -145,11 +146,14 @@ class LatestCircuitRecord(db.Model):
 
 class CircuitAlarms(db.Model, TimeObj):
     __tablename__ = 'circuit_alarms'
-    alarm_id = db.Column(Integer, primary_key=True)
+    id = db.Column(Integer, primary_key=True)
+    circuit_breaker_id = db.Column(Integer, ForeignKey(CircuitBreakers.id, 
+                                                       ondelete='CASCADE'),
+                                   nullable=False)
     addr = db.Column(Integer)
-    node = db.Column(String)
-    alarm_type = db.Column(String(SHORT_LEN))
-    info = db.Column(String)
+    node = db.Column(String(MEDIUM_LEN))
+    alarm_or_type = db.Column(String(SHORT_LEN))
+    info = db.Column(String(MEDIUM_LEN))
     type_number = db.Column(SmallInteger)
 
     @property
@@ -170,10 +174,11 @@ class CircuitAlarms(db.Model, TimeObj):
 
 class LatestAlarm(db.Model, TimeObj):
     __tablename__ = 'latest_alarms'
-    circuit_id = db.Column(Integer, ForeignKey(CircuitBreakers.id),
-                           ondelete='CASCADE', index=True)
-    circuit_alarm_id = db.Column(Integer, ForeignKey(CircuitAlarms.id),
-                                 ondelete='SET NULL')
+    id = db.Column(Integer, primary_key=True)
+    circuit_id = db.Column(Integer, ForeignKey(CircuitBreakers.id,
+                                               ondelete='CASCADE'), index=True)
+    circuit_alarm_id = db.Column(Integer, ForeignKey(CircuitAlarms.id, 
+                                                     ondelete='SET NULL'))
     circuit = relationship('CircuitBreaker')
     alarm = relationship('CircuitAlarms')
 
@@ -202,7 +207,7 @@ class EnegyConsumeMonthly(db.Model, TimeObj):
 class IRSensorStatus(db.Model, TimeObj):
     __tablename__ = 'ir_sensor_status'
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey("IRSensors.id",
+    sensor_id = db.Column(Integer, ForeignKey("ir_sensors.id",
                                               ondelete="CASCADE"))
     value = db.Column(BOOLEAN)
     sensor = relationship('IRSensors')
@@ -212,8 +217,8 @@ class IRSensorStatus(db.Model, TimeObj):
 class IRSensors(db.Model, TimeObj):
     __tablename__ = 'ir_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, index=True)
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
                                             ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(IRSensorStatus.id,
                                                      ondelete="SET NULL"))
@@ -224,7 +229,7 @@ class AQIValues(db.Model, TimeObj):
     __tablename__ = 'aqi_values'
     # 只有主动查询
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey("AQISensors.id",
+    sensor_id = db.Column(Integer, ForeignKey("aqi_sensors.id",
                                               ondelete="CASCADE"))
     temperature = db.Column(Float)
     humidity = db.Column(Float)
@@ -238,8 +243,8 @@ class AQIValues(db.Model, TimeObj):
 class AQISensors(db.Model, TimeObj):
     __tablename__ = 'aqi_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, Index=True)
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
                                             ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(AQIValues.id,
                                                      ondelete="SET NULL"))
@@ -250,17 +255,17 @@ class LuxValues(db.Model, TimeObj):
     __tablename__ = 'lux_values'
     # 只有主动查询
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey("LuxSensors.id",
+    sensor_id = db.Column(Integer, ForeignKey("lux_sensors.id",
                                               ondelete='CASCADE'))
-    value = db.Column(Float)
+    value = db.Column(Integer)
     sensor = relationship('LuxSensors')
 
 
 class LuxSensors(db.Model, TimeObj):
     __tablename__ = 'lux_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, Index=True)
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
                                             ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(LuxValues.id,
                                                      ondelete="SET NULL"))
@@ -270,7 +275,7 @@ class LuxSensors(db.Model, TimeObj):
 class FireAlarmStatus(db.Model, TimeObj):
     __tablename__ = 'fire_alarm_status'
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey('FireAlarmSensors.id',
+    sensor_id = db.Column(Integer, ForeignKey('fire_alarm_sensors.id',
                                               ondelete='CASCADE'))
     value = db.Column(SmallInteger)
     sensor = relationship('FireAlarmSensors')
@@ -279,32 +284,42 @@ class FireAlarmStatus(db.Model, TimeObj):
 class FireAlarmSensors(db.Model, TimeObj):
     __tablename__ = 'fire_alarm_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, Index=True)
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN),
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
+    latest_record_id = db.Column(Integer, 
+                                 ForeignKey('fire_alarm_status.id',
                                             ondelete='SET NULL'))
+    latest_record = relationship('FireAlarmStatus')
 
 
 class SwitchStatus(db.Model, TimeObj):
     __tablename__ = 'switch_status'
     id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey('Switches.id',
+    sensor_id = db.Column(Integer, ForeignKey('switches.id',
                                               ondelete='CASCADE'))
     value = db.Column(SmallInteger)
-    sensor = relationship('Switch')
+    sensor = relationship('Switches')
 
 
 class Switches(db.Model, TimeObj):
-    __tablename__ = 'switch_status'
+    __tablename__ = 'switches'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, Index=True)
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN), 
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
+    latest_record_id = db.Column(Integer,
+                                 ForeignKey('switch_status.id',
                                             ondelete='SET NULL'))
+    latest_record = relationship('SwitchStatus')
 
 
 class ElevatorStatus(db.Model, TimeObj):
     __tablename__ = 'elevator_status'
     id = db.Column(Integer, primary_key=True)
-    elevator_id = db.Column(Integer, ForeignKey('Elevators.id',
+    elevator_id = db.Column(Integer, ForeignKey('elevators.id',
                                                 ondelete='CASCADE'))
     floor = db.Column(Integer)
     direction = db.Column(SmallInteger)
@@ -312,15 +327,15 @@ class ElevatorStatus(db.Model, TimeObj):
 
     @property
     def direction(self):
-        mapping = {1:"up",
-                   2:"down",
-                   0:"stop"}
+        mapping = {1: "up",
+                   2: "down",
+                   0: "stop"}
         return mapping(self.direction)
 
-    
+
 class Elevators(db.Model, TimeObj):
     __tablename__ = 'elevators'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode, Index=True)
-    locator = db.Column(Unicode, ForeignKey(Locators.internal_code,
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
                                             ondelete='SET NULL'))
