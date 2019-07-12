@@ -10,7 +10,7 @@ MEDIUM_LEN = 50
 LONG_LEN = 100
 
 
-class TimeObj:
+class TimeStampMixin:
     created_at = db.Column(TIMESTAMP)
     updated_at = db.Column(TIMESTAMP)
 
@@ -23,11 +23,12 @@ class CarbonMixin:
         return getattr(self, self.carbo_mixin_watt_attr_name) * self.carbon_mixin_factor
 
 
-class Users(db.Model, TimeObj):
+class Users(db.Model, TimeStampMixin):
     __tablename__ = 'users'
     '''sync from hik'''
     id = db.Column(Integer, primary_key=True)
     person_id = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    person_name = db.Column(Unicode(length=SHORT_LEN))
     job_no = db.Column(String(MEDIUM_LEN))
     gender = db.Column(SmallInteger)
     org_path = db.Column(String(MEDIUM_LEN))
@@ -43,7 +44,28 @@ class Users(db.Model, TimeObj):
     photo_url = db.Column(String(LONG_LEN))
 
 
-class Locators(db.Model, TimeObj):
+class UserLogins(db.Model, TimeStampMixin):
+    __tablename__ = 'user_logins'
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Users.person_id,
+                                                               ondelete='CASCADE'))
+    username = db.Column(Unicode(length=MEDIUM_LEN))
+    password = db.Column(String(MEDIUM_LEN))
+    level = db.Column(SmallInteger)
+    
+    @property
+    def leverl_repr(self):
+        if self.level == 0:
+            return 'visitor'
+        if self.level == 1:
+            return 'employee'
+        if self.level == 2:
+            return 'sub_admin'
+        if self.level == 3:
+            return 'admin'
+
+
+class Locators(db.Model, TimeStampMixin):
     __tablename__ = 'locators'
     internal_code = db.Column(Unicode(length=MEDIUM_LEN), primary_key=True)
     description = db.Column(String(LONG_LEN))
@@ -55,7 +77,7 @@ class Locators(db.Model, TimeObj):
     coorZ = db.Column(Float, nullable=True)
 
 
-class TrackingDevices(db.Model, TimeObj):
+class TrackingDevices(db.Model, TimeStampMixin):
     __tablename__ = 'tracking_devices'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
@@ -63,12 +85,19 @@ class TrackingDevices(db.Model, TimeObj):
     locator = db.Column(Unicode(length=MEDIUM_LEN), 
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
-    status = db.Column(SmallInteger)
     # 0 means camera, 1 means acs
     device_type = db.Column(SmallInteger)
 
 
-class AppearRecords(db.Model, TimeObj):
+class AcsRecords(db.Model, TimeStampMixin):
+    id = db.Column(Integer, primary_key=True)
+    acs_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
+                                           ondelete="CASCADE"))
+    status = db.Column(SmallInteger)
+    event_type = db.Column(Integer)
+
+
+class AppearRecords(db.Model, TimeStampMixin):
     __tablename__ = 'appear_records'
     id = db.Column(Integer, primary_key=True)
     user_id = db.Column(Integer, ForeignKey(Users.id,
@@ -77,7 +106,7 @@ class AppearRecords(db.Model, TimeObj):
                                               ondelete="CASCADE"))
 
 
-class HeatMapSnapshots(db.Model, TimeObj):
+class HeatMapSnapshots(db.Model, TimeStampMixin):
     __tablename__ = 'heatmap_snapshots'
     id = db.Column(Integer, primary_key=True)
     device_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
@@ -85,7 +114,7 @@ class HeatMapSnapshots(db.Model, TimeObj):
     count = db.Column(Integer)
 
 
-class CircuitBreakers(db.Model, TimeObj):
+class CircuitBreakers(db.Model, TimeStampMixin):
     __tablename__ = 'circuit_breakers'
     id = db.Column(Integer, primary_key=True)
     mac = db.Column(Unicode(length=MEDIUM_LEN), index=True)
@@ -97,7 +126,7 @@ class CircuitBreakers(db.Model, TimeObj):
     unit = db.Column(String(SHORT_LEN))
 
 
-class CircuitRecords(db.Model, TimeObj):
+class CircuitRecords(db.Model, TimeStampMixin):
     __tablename__ = 'circuit_records'
     id = db.Column(Integer, primary_key=True)
     circuit_breaker_id = db.Column(Integer, ForeignKey(CircuitBreakers.id,
@@ -152,7 +181,7 @@ class LatestCircuitRecord(db.Model):
     circuit_record = relationship('CircuitRecord')
 
 
-class CircuitAlarms(db.Model, TimeObj):
+class CircuitAlarms(db.Model, TimeStampMixin):
     __tablename__ = 'circuit_alarms'
     id = db.Column(Integer, primary_key=True)
     circuit_breaker_id = db.Column(Integer, ForeignKey(CircuitBreakers.id, 
@@ -180,7 +209,7 @@ class CircuitAlarms(db.Model, TimeObj):
         return alarm_info_mapping[self.type_number]
 
 
-class LatestAlarm(db.Model, TimeObj):
+class LatestAlarm(db.Model, TimeStampMixin):
     __tablename__ = 'latest_alarms'
     id = db.Column(Integer, primary_key=True)
     circuit_id = db.Column(Integer, ForeignKey(CircuitBreakers.id,
@@ -191,7 +220,7 @@ class LatestAlarm(db.Model, TimeObj):
     alarm = relationship('CircuitAlarms')
 
 
-class EnergyConsumeDaily(db.Model, TimeObj, CarbonMixin):
+class EnergyConsumeDaily(db.Model, TimeStampMixin, CarbonMixin):
     __tablename__ = 'energy_consume_daily'
     carbon_mixin_watt_attr_name = 'electricity'
     consume_id = db.Column(Integer, primary_key=True)
@@ -203,7 +232,7 @@ class EnergyConsumeDaily(db.Model, TimeObj, CarbonMixin):
     # total_electricity = db.Column(Float)
 
 
-class EnegyConsumeMonthly(db.Model, TimeObj):
+class EnegyConsumeMonthly(db.Model, TimeStampMixin):
     __tablename__ = 'energy_consume_monthly'
     consume_id = db.Column(Integer, primary_key=True)
     circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id))
@@ -213,7 +242,7 @@ class EnegyConsumeMonthly(db.Model, TimeObj):
     # total_electricity = db.Column(Float)
 
 
-class IRSensorStatus(db.Model, TimeObj):
+class IRSensorStatus(db.Model, TimeStampMixin):
     __tablename__ = 'ir_sensor_status'
     id = db.Column(Integer, primary_key=True)
     sensor_id = db.Column(Integer, ForeignKey("ir_sensors.id",
@@ -223,7 +252,7 @@ class IRSensorStatus(db.Model, TimeObj):
 
 
 # TODO 是查询还是推送
-class IRSensors(db.Model, TimeObj):
+class IRSensors(db.Model, TimeStampMixin):
     __tablename__ = 'ir_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
@@ -234,7 +263,7 @@ class IRSensors(db.Model, TimeObj):
     latest_record = relationship('IRSensorStatus')
 
 
-class AQIValues(db.Model, TimeObj):
+class AQIValues(db.Model, TimeStampMixin):
     __tablename__ = 'aqi_values'
     # 只有主动查询
     id = db.Column(Integer, primary_key=True)
@@ -249,7 +278,7 @@ class AQIValues(db.Model, TimeObj):
     sensor = relationship('AQISensors')
 
 
-class AQISensors(db.Model, TimeObj):
+class AQISensors(db.Model, TimeStampMixin):
     __tablename__ = 'aqi_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
@@ -260,7 +289,7 @@ class AQISensors(db.Model, TimeObj):
     latest_record = relationship('AQIValues')
 
 
-class LuxValues(db.Model, TimeObj):
+class LuxValues(db.Model, TimeStampMixin):
     __tablename__ = 'lux_values'
     # 只有主动查询
     id = db.Column(Integer, primary_key=True)
@@ -270,7 +299,7 @@ class LuxValues(db.Model, TimeObj):
     sensor = relationship('LuxSensors')
 
 
-class LuxSensors(db.Model, TimeObj):
+class LuxSensors(db.Model, TimeStampMixin):
     __tablename__ = 'lux_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
@@ -281,7 +310,7 @@ class LuxSensors(db.Model, TimeObj):
     latest_record = relationship('LuxValues')
 
 
-class FireAlarmStatus(db.Model, TimeObj):
+class FireAlarmStatus(db.Model, TimeStampMixin):
     __tablename__ = 'fire_alarm_status'
     id = db.Column(Integer, primary_key=True)
     sensor_id = db.Column(Integer, ForeignKey('fire_alarm_sensors.id',
@@ -290,7 +319,7 @@ class FireAlarmStatus(db.Model, TimeObj):
     sensor = relationship('FireAlarmSensors')
 
 
-class FireAlarmSensors(db.Model, TimeObj):
+class FireAlarmSensors(db.Model, TimeStampMixin):
     __tablename__ = 'fire_alarm_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
@@ -303,19 +332,21 @@ class FireAlarmSensors(db.Model, TimeObj):
     latest_record = relationship('FireAlarmStatus')
 
 
-class SwitchStatus(db.Model, TimeObj):
+class SwitchStatus(db.Model, TimeStampMixin):
     __tablename__ = 'switch_status'
     id = db.Column(Integer, primary_key=True)
     sensor_id = db.Column(Integer, ForeignKey('switches.id',
                                               ondelete='CASCADE'))
     value = db.Column(SmallInteger)
+    load = db.Column(Integer)
     sensor = relationship('Switches')
 
 
-class Switches(db.Model, TimeObj):
+class Switches(db.Model, TimeStampMixin):
     __tablename__ = 'switches'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    channel = db.Column(Integer)
     locator = db.Column(Unicode(length=MEDIUM_LEN), 
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
@@ -325,7 +356,7 @@ class Switches(db.Model, TimeObj):
     latest_record = relationship('SwitchStatus')
 
 
-class ElevatorStatus(db.Model, TimeObj):
+class ElevatorStatus(db.Model, TimeStampMixin):
     __tablename__ = 'elevator_status'
     id = db.Column(Integer, primary_key=True)
     elevator_id = db.Column(Integer, ForeignKey('elevators.id',
@@ -342,7 +373,7 @@ class ElevatorStatus(db.Model, TimeObj):
         return mapping(self.direction)
 
 
-class Elevators(db.Model, TimeObj):
+class Elevators(db.Model, TimeStampMixin):
     __tablename__ = 'elevators'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
