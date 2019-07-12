@@ -4,7 +4,7 @@ from flask_log_request_id import RequestID
 from XNBackend.task import celery
 from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
-from XNBackend.models import db
+#from XNBackend.models import db
 from XNBackend.extension import SaferProxyFix
 from flask_jwt_extended import JWTManager
 from XNBackend.api import api_bp
@@ -27,7 +27,7 @@ def create_app(config_filename=None):
     # flask compress
     Compress(app)
 
-    db.init_app(app)
+    # db.init_app(app)
     JWTManager(app)
     bcrypt.init_app(app)
 

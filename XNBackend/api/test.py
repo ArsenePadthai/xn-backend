@@ -1,11 +1,9 @@
 from ._blueprint import api_bp
 from flask import jsonify
-from XNBackend.task.hik.task_hik import *
-from XNBackend.task.hik.protocol import *
-
+from XNBackend.task.sensor.task import *
 
 
 @api_bp.route('/test', methods=['GET'])
 def test():
-    network_relay_query.delay()
+    Lux_sensor_query.delay()
     return jsonify({"hello":"world"})

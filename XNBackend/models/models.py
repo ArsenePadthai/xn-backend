@@ -15,6 +15,14 @@ class TimeObj:
     updated_at = db.Column(TIMESTAMP)
 
 
+class CarbonMixin:
+    carbon_mixin_factor = 0.33
+    carbon_mixin_watt_attr_name = ''
+    @property
+    def carbon_emission(self):
+        return getattr(self, self.carbo_mixin_watt_attr_name) * self.carbon_mixin_factor
+
+
 class Users(db.Model, TimeObj):
     __tablename__ = 'users'
     '''sync from hik'''
@@ -183,8 +191,9 @@ class LatestAlarm(db.Model, TimeObj):
     alarm = relationship('CircuitAlarms')
 
 
-class EnergyConsumeDaily(db.Model, TimeObj):
+class EnergyConsumeDaily(db.Model, TimeObj, CarbonMixin):
     __tablename__ = 'energy_consume_daily'
+    carbon_mixin_watt_attr_name = 'electricity'
     consume_id = db.Column(Integer, primary_key=True)
     circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id,
                                                     ondelete='CASCADE'))

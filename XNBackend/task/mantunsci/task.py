@@ -15,31 +15,41 @@ param = {
     'project_code':'',
     'redirect_uri':''
 }
+s = None
+
+def req_session():
+    global s
+    if s is None:
+        s = requests.Session()
+        s.auth = MantunsciAuthInMemory(param['auth_url'], param['username'], param['password'], param['app_key'], param['app_secret'], param['project_code'], param['redirect_uri'])
+    return s
 
 
 def data_requests(body):
-    r = request.post(auth_url, auth=MantunsciAuthBase(param['auth_url'], param['username'], param['password'], param['app_key'], param['app_secret'], param['project_code'], param['redirect_uri']), data=body)    
-    message = json.load(r.text)
+    s = req_session()
+    r = s.post(param['auth_url'], data=body)    
+    message = r.json
     return message['data']
-    
 
+    
+'''
 def all_box():
     record = []
-    body = json.dumps({'method':'GET_BOXES', 'projectCode':''})
+    body = {'method':'GET_BOXES', 'projectCode':''}
     data = data_requests(body)
     for i in range(len(data)):
         box = CircuitBreakers(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'])
         record.append(box)
     db.session.bulk_save_objects(record)
     db.session.commit()
-    
+'''    
 
 
 @celery.task()
 def power_month():
     record = []
     localtime = time.localtime(time.time())
-    body = json.dumps({'method':'GET_BOX_MON_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0]})
+    body = {'method':'GET_BOX_MON_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0]}
     data = data_requests(body)
     for i in range(len(data)):
         monthly_record = EnergyConsumeMonthly(addr=data[i]['addr'], electricity=data[i]['electricity'])
@@ -52,7 +62,7 @@ def power_month():
 def power_day():
     record = []
     localtime = time.localtime(time.time())
-    body = json.dumps({'method':'GET_BOX_DAY_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0], 'month':localtime[1]})
+    body = {'method':'GET_BOX_DAY_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0], 'month':localtime[1]}
     data = data_requests(body)
     for i in range(len(data)):
         daily_record = EnergyConsumeDaily(addr=data[i]['addr'], electricity=data[i]['electricity'])
@@ -61,26 +71,55 @@ def power_day():
     db.session.commit()
 
 
+column_mappings = {
+    'addr': 'addr',
+    'title': 'title',
+    'validity': 'validity', 
+    'enable_netctr': 'enableNetCtrl',
+    'oc': 'oc', 
+    'online': 'online', 
+    'total_power': 'power',
+    'mxgg': 'mxgg', 
+    'mxgl': 'mxgl', 
+    'line_type': 'lineType', 
+    'spec': 'specification', 
+    'control': 'control',
+    'visibility': 'visibility',
+    'alarm': 'alarm',
+    'gLd': 'gLd',
+    'gA': 'gA',
+    'gT': 'gT',
+    'gV': 'gV',
+    'gW': 'gW',
+    'gPF': 'gPF',
+    'aA': 'aA',
+    'aT': 'aT',
+    'aV': 'aV',
+    'aW': 'aW',
+    'aPF': 'aPF',
+    'bA': 'bA',
+    'bT': 'bT',
+    'bV': 'bV',
+    'bW': 'bW',
+    'bPF': 'bPF',
+    'cA': 'cA',
+    'cT': 'cT',
+    'cV': 'cV',
+    'cW': 'cW',
+    'cPF': 'cPF',
+    'nA': 'nA',
+    'nT': 'nT'
+}
 @celery.task()
 def circuit_current():
     localtime = time.localtime(time.time())
-    body = json.dumps({'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'', 'mac':'')
+    body = {'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'', 'mac':''}
     data = data_requests(body)
     for i in range(len(data)):
-        circuit_record = CircuitRecords(circuit_mac=data[i]['cricuit_mac'], validity=data[i]['validity'], 
-                                        enable_netctr=data[i]['enableNetCtr'], oc=data[i]['oc'], 
-                                        online=data[i]['online'], total_power=data[i]['power'], 
-                                        mxgg=data[i]['mxgg'], mxgl=data[i]['mxgl'], 
-                                        line_type=data[i]['lineType'], spec=data[i]['specification'], 
-                                        control=data[i]['control'], visibility=data[i]['visibility'], 
-                                        alarm=data[i]['alarm'], gLd=data[i]['gLd'], gA=data[i]['gA'], 
-                                        gT=data[i]['gT'], gV=data[i]['gV'], gW=data[i]['gW'], 
-                                        gPF=data[i]['gPF'], aA=data[i]['aA'], aT=data[i]['aT'], 
-                                        aV=data[i]['aV'], aW=data[i]['aW'], aPF=data[i]['aPF'], 
-                                        bA=data[i]['bA'], bT=data[i]['bT'], bV=data[i]['bV'], 
-                                        bW=data[i]['bW'], bPF=data[i]['bPF'], cA=data[i]['cA'], 
-                                        cT=data[i]['cT'], cV=data[i]['cV'], cW=data[i]['cW'], 
-                                        cPF=data[i]['cPF'], nA=data[i]['nA'], nT=data[i]['nT'])
+        data_args = {
+            k: data[i].get(v) for k,v in column_mappings.items()
+        }
+        circuit_record = CircuitRecords(**data_args)
         record.append(circuit_record)
     db.session.bulk_save_objects(record)
     db.session.commit()
