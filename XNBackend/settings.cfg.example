@@ -12,7 +12,7 @@ JWT_SECRET_KEY='qazxcvbnmklpoiuytrewsdfghjk'
 JWT_AUTH_URL_RULE=None
 JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=7)
 
-SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://test:test@127.0.0.1:3306/wf?charset=utf8mb4'
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://test:test@127.0.0.1:3306/xn?charset=utf8mb4'
 SQLALCHEMY_TRACK_MODIFICATIONS=False
 
 JWT_EXPIRATION_DELTA = timedelta(seconds=60*60*24)
@@ -32,13 +32,16 @@ CELERY_QUEUES = (
 )
 
 CELERY_ROUTES = {
+    'XNBackend.task.sensor.task.network_relay_control':{"queue":"first", "routing_key":"first"},
     'XNBackend.task.sensor.task.network_relay_query':{"queue":"first", "routing_key":"first"},
     'XNBackend.task.sensor.task.IR_sensor_query':{"queue":"first", "routing_key":"first"},
     'XNBackend.task.sensor.task.AQI_sensor_query':{"queue":"first", "routing_key":"first"},
     'XNBackend.task.sensor.task.Lux_sensor_query':{"queue":"first", "routing_key":"first"},
+    'XNBackend.task.mantunsci.task.all_boxes':{"queue":"second", "routing_key":"second"},
     'XNBackend.task.mantunsci.task.power_month':{"queue":"second", "routing_key":"second"},
     'XNBackend.task.mantunsci.task.power_day':{"queue":"second", "routing_key":"second"},
     'XNBackend.task.mantunsci.task.circuit_current':{"queue":"second", "routing_key":"second"},
+    'XNBackend.task.mantunsci.task.circuit_alarm':{"queue":"second", "routing_key":"second"},
 }
 
 #TASK_REJECT_ON_WORKER_LOST = True

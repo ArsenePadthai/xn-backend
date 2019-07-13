@@ -177,8 +177,8 @@ class LatestCircuitRecord(db.Model):
                                                ondelete='CASCADE'), index=True)
     circuit_record_id = db.Column(Integer, ForeignKey(CircuitRecords.id,
                                                       ondelete='SET NULL'))
-    circuit_breaker = relationship('CircuitBreaker', backref='latest_record')
-    circuit_record = relationship('CircuitRecord')
+    circuit_breaker = relationship('CircuitBreakers', backref='latest_record')
+    circuit_record = relationship('CircuitRecords')
 
 
 class CircuitAlarms(db.Model, TimeStampMixin):
@@ -216,7 +216,7 @@ class LatestAlarm(db.Model, TimeStampMixin):
                                                ondelete='CASCADE'), index=True)
     circuit_alarm_id = db.Column(Integer, ForeignKey(CircuitAlarms.id, 
                                                      ondelete='SET NULL'))
-    circuit = relationship('CircuitBreaker')
+    circuit = relationship('CircuitBreakers')
     alarm = relationship('CircuitAlarms')
 
 
@@ -248,7 +248,7 @@ class IRSensorStatus(db.Model, TimeStampMixin):
     sensor_id = db.Column(Integer, ForeignKey("ir_sensors.id",
                                               ondelete="CASCADE"))
     value = db.Column(BOOLEAN)
-    sensor = relationship('IRSensors')
+    sensor = relationship('IRSensors', foreign_keys=[sensor_id])
 
 
 # TODO 是查询还是推送
@@ -260,7 +260,7 @@ class IRSensors(db.Model, TimeStampMixin):
                                             ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(IRSensorStatus.id,
                                                      ondelete="SET NULL"))
-    latest_record = relationship('IRSensorStatus')
+    latest_record = relationship('IRSensorStatus', foreign_keys=[latest_record_id])
 
 
 class AQIValues(db.Model, TimeStampMixin):
@@ -275,7 +275,7 @@ class AQIValues(db.Model, TimeStampMixin):
     co2 = db.Column(Float)
     tvoc = db.Column(Float)
     voc = db.Column(Float)
-    sensor = relationship('AQISensors')
+    sensor = relationship('AQISensors', foreign_keys=[sensor_id])
 
 
 class AQISensors(db.Model, TimeStampMixin):
@@ -286,7 +286,7 @@ class AQISensors(db.Model, TimeStampMixin):
                                             ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(AQIValues.id,
                                                      ondelete="SET NULL"))
-    latest_record = relationship('AQIValues')
+    latest_record = relationship('AQIValues', foreign_keys=[latest_record_id])
 
 
 class LuxValues(db.Model, TimeStampMixin):
@@ -296,7 +296,7 @@ class LuxValues(db.Model, TimeStampMixin):
     sensor_id = db.Column(Integer, ForeignKey("lux_sensors.id",
                                               ondelete='CASCADE'))
     value = db.Column(Integer)
-    sensor = relationship('LuxSensors')
+    sensor = relationship('LuxSensors', foreign_keys=[sensor_id])
 
 
 class LuxSensors(db.Model, TimeStampMixin):
@@ -307,7 +307,7 @@ class LuxSensors(db.Model, TimeStampMixin):
                                             ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(LuxValues.id,
                                                      ondelete="SET NULL"))
-    latest_record = relationship('LuxValues')
+    latest_record = relationship('LuxValues', foreign_keys=[latest_record_id])
 
 
 class FireAlarmStatus(db.Model, TimeStampMixin):
@@ -316,7 +316,7 @@ class FireAlarmStatus(db.Model, TimeStampMixin):
     sensor_id = db.Column(Integer, ForeignKey('fire_alarm_sensors.id',
                                               ondelete='CASCADE'))
     value = db.Column(SmallInteger)
-    sensor = relationship('FireAlarmSensors')
+    sensor = relationship('FireAlarmSensors', foreign_keys=[sensor_id])
 
 
 class FireAlarmSensors(db.Model, TimeStampMixin):
@@ -329,7 +329,7 @@ class FireAlarmSensors(db.Model, TimeStampMixin):
     latest_record_id = db.Column(Integer, 
                                  ForeignKey('fire_alarm_status.id',
                                             ondelete='SET NULL'))
-    latest_record = relationship('FireAlarmStatus')
+    latest_record = relationship('FireAlarmStatus', foreign_keys=[latest_record_id])
 
 
 class SwitchStatus(db.Model, TimeStampMixin):
@@ -339,7 +339,7 @@ class SwitchStatus(db.Model, TimeStampMixin):
                                               ondelete='CASCADE'))
     value = db.Column(SmallInteger)
     load = db.Column(Integer)
-    sensor = relationship('Switches')
+    sensor = relationship('Switches', foreign_keys=[sensor_id])
 
 
 class Switches(db.Model, TimeStampMixin):
@@ -353,7 +353,7 @@ class Switches(db.Model, TimeStampMixin):
     latest_record_id = db.Column(Integer,
                                  ForeignKey('switch_status.id',
                                             ondelete='SET NULL'))
-    latest_record = relationship('SwitchStatus')
+    latest_record = relationship('SwitchStatus', foreign_keys=[latest_record_id])
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):

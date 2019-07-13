@@ -2,7 +2,7 @@ import socket
 import random
 from struct import pack
 from XNBackend.task import celery
-from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors 
+from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchStatus
 from XNBackend.parser.protocol import data_parse
 
 
@@ -37,51 +37,72 @@ def send_to_server(data):
     return message
 
 
-def address_pack(address):
-    return pack('>Q' address & 0xffffffffff)[3:]
+def address_pack(address, n):
+    return pack('>Q', int(address) & 0xffffffffff)[n:]
 
 
-def generator_id(length):
-    for i in range(length):
-        yield i
+def data_generator(model):
+    models = {'Switch':[Switches, 'CC', 6, 'FE EE'], 'IR':[IRSensors, 'DA', 3, '86 86 86 EE'], 'AQI':[AQISensors, 'DC', 3, '86 86 86 EE'], 'Lux':[LuxSensors, 'DF', 3, '86 86 86 EE']}
+    length = models[model][0].query.count()
+    for items in range(length):
+        sensor = models[model][0].query.filter_by(id = items+1).first()
+        data = bytes.fromhex(models[model][1]) + address_pack(sensor.device_index_code, models[model][2]) + bytes.fromhex(models[model][3])
+        recv_data = send_to_server(data)
+        yield recv_data, sensor.id
 
-    
+
+@celery.task()
+def network_relay_control(id, channel, code):
+    data = bytes.fromhex('AA') + bytes.fromhex(id) + bytes.fromhex(channel) + bytes.fromhex(code) + bytes.fromhex('EE')
+    recv_data = send_to_server(data)
+    switch = Switches.query.filter_by(device_index_code = recv_data.id).first()
+    record = SwitchStatus(sensor_id=switch.id, value=recv_data.status, load=recv_data.loadDetect)
+    db.session.add(record)
+    db.session.commit()
+    return switch.id
+
+
 @celery.task()
 def network_relay_query():
-    id_bytes = bytes.fromhex(hex(random.randint(1, 65535))[2:].rjust(4, '0'))
-    data = bytes.fromhex('CC') + id_bytes + bytes.fromhex('FE EE')
-    network_data = send_to_server(data)
-    #network_record = 
-    return str(network_data)
+    records = []
+    for object, id in data_generator('Switch'):
+        record = SwitchStatus(sensor_id=id, value=object.status, load=object.loadDetect)
+        records.append(record)
+    db.session.bulk_save_objects(records)
+    db.session.commit()
+    return id
 
- 
+
 @celery.task()
 def IR_sensor_query():
     records = []
-    for items in generator_id(IRSensors.query.count):
-        ir_sensor = IRSensors.query.filter_by(id = items).first()
-        data = bytes.fromhex('DA') + address_pack(ir_sensor.address) + bytes.fromhex('86 86 86 EE')
-        ir_data = send_to_server(data)
-        ir_record = IRSensorStatus(sensor_id=ir_record._address, value=ir_data.status)
-        records.append(ir_record)
+    for object, id in data_generator('IR'):
+        record = IRSensorStatus(sensor_id=id, value=object.status)
+        records.append(record)
     db.session.bulk_save_objects(records)
     db.session.commit()
-    return str(ir_data)
+    return id
 
 
 @celery.task()
 def AQI_sensor_query():
-    data = bytes.fromhex('DC') + address_pack(3131413) + bytes.fromhex('86 86 86 EE')
-    aqi_data = send_to_server(data)
-    #aqi_record = AQIValues()
-    return str(aqi_data.voc)
+    records = []
+    for object, id in data_generator('AQI'):
+        record = AQIValues(sensor_id=id, temperature=object.temperature, humidity=object.humidity, pm25=object.pm, co2=object.co2, tvoc=object.tvoc, voc=object.voc)
+        records.append(record)
+    db.session.bulk_save_objects(records)
+    db.session.commit()
+    return id
 
 
 @celery.task()
 def Lux_sensor_query():
-    data = bytes.fromhex('DF') + address_pack(78568) + bytes.fromhex('86 86 86 EE')
-    lux_data = send_to_server(data)
-    #lux_record = LuxValues()
-    return str(lux_data.lux)
+    records = []
+    for object, id in data_generator('Lux'):
+        record = LuxValues(sensor_id=id, value=object.lux)
+        records.append(record)
+    db.session.bulk_save_objects(records)
+    db.session.commit()
+    return id
 
 
