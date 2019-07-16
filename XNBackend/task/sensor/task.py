@@ -42,7 +42,12 @@ def address_pack(address, n):
 
 
 def data_generator(model):
-    models = {'Switch':[Switches, 'CC', 6, 'FE EE'], 'IR':[IRSensors, 'DA', 3, '86 86 86 EE'], 'AQI':[AQISensors, 'DC', 3, '86 86 86 EE'], 'Lux':[LuxSensors, 'DF', 3, '86 86 86 EE']}
+    models = {
+        'Switch':[Switches, 'CC', 6, 'FE EE'], 
+        'IR':[IRSensors, 'DA', 3, '86 86 86 EE'], 
+        'AQI':[AQISensors, 'DC', 3, '86 86 86 EE'], 
+        'Lux':[LuxSensors, 'DF', 3, '86 86 86 EE']
+    }
     length = models[model][0].query.count()
     for items in range(length):
         sensor = models[model][0].query.filter_by(id = items+1).first()

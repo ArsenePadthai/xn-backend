@@ -6,7 +6,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/xn-backend
 Environment=XN_SETTINGS=../settings.cfg
-ExecStart=/home/ubuntu/.local/share/virtualenvs/xn-backend-InHQO0Yz/bin/celery -A XNBackend.app worker -n worker2@%n -Q second
+ExecStart=/home/ubuntu/.local/share/virtualenvs/xn-backend-InHQO0Yz/bin/celery -A XNBackend.app worker --concurrency=10 -n worker2@%n -Q second
 Restart=always
 RestartSec=100ms
 
