@@ -4,6 +4,8 @@ from .base import db
 from sqlalchemy import ForeignKey, Unicode, BOOLEAN, TIMESTAMP, String, \
     SmallInteger, Integer, Float
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
+from flask_bcrypt import generate_password_hash, check_password_hash
 
 SHORT_LEN = 30
 MEDIUM_LEN = 50
@@ -11,8 +13,9 @@ LONG_LEN = 100
 
 
 class TimeStampMixin:
-    created_at = db.Column(TIMESTAMP, nullable=False)
-    updated_at = db.Column(TIMESTAMP)
+    created_at = db.Column(TIMESTAMP, nullable=False,
+                           server_default=func.current_timestamp())
+    updated_at = db.Column(TIMESTAMP, onupdate=func.current_timestamp())
 
 
 class CarbonMixin:
@@ -47,12 +50,11 @@ class Users(db.Model, TimeStampMixin):
 class UserLogins(db.Model, TimeStampMixin):
     __tablename__ = 'user_logins'
     id = db.Column(Integer, primary_key=True)
-    user_id = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Users.person_id,
-                                                               ondelete='CASCADE'))
+    user_id = db.Column(Integer, ForeignKey(Users.id, ondelete='CASCADE'))
     username = db.Column(Unicode(length=MEDIUM_LEN))
-    password = db.Column(String(MEDIUM_LEN))
+    password = db.Column(String(LONG_LEN))
     level = db.Column(SmallInteger)
-    
+
     @property
     def leverl_repr(self):
         if self.level == 0:
@@ -63,6 +65,12 @@ class UserLogins(db.Model, TimeStampMixin):
             return 'sub_admin'
         if self.level == 3:
             return 'admin'
+
+    def set_password(self, password):
+        self.password = generate_password_hash(password, 10).decode('utf-8')
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
 
 
 class Locators(db.Model, TimeStampMixin):

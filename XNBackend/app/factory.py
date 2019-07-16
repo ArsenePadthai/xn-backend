@@ -9,6 +9,8 @@ from XNBackend.extension import SaferProxyFix
 from flask_jwt_extended import JWTManager
 from XNBackend.api import api_bp
 import flask_restless
+from flask_jwt_extended import JWTManager
+from XNBackend.cli import user_cli
 
 
 def create_app(config_filename=None):
@@ -37,6 +39,10 @@ def create_app(config_filename=None):
     app.register_blueprint(api_bp)
 
     restless_manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
+    JWTManager(app)
+    app.cli.add_command(user_cli)
+
+    # flask_restless part
     restless_manager.create_api(LuxSensors, methods=["GET"])
 
     return app

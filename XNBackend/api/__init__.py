@@ -1,2 +1,2 @@
 from ._blueprint import api_bp
-from . import test
+from . import test, login
