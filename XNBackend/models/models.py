@@ -11,7 +11,7 @@ LONG_LEN = 100
 
 
 class TimeStampMixin:
-    created_at = db.Column(TIMESTAMP)
+    created_at = db.Column(TIMESTAMP, nullable=False)
     updated_at = db.Column(TIMESTAMP)
 
 
