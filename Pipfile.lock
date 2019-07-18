@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "64bbb541105ef333a06af67077f44aa6aaca81a0c0ae614b38774ee9453dbb3c"
+            "sha256": "ff0e617a83a49f635a1f2e9e6da2dbfa8a10ee3f4d7e706f3e3171accb5ea265"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -195,6 +195,13 @@
             "index": "pypi",
             "version": "==0.10.0"
         },
+        "flask-peewee": {
+            "hashes": [
+                "sha256:2c09483ac4976ba913cf13ea823b878969da6e3fa886bcaa384d1e3390013b7d"
+            ],
+            "index": "pypi",
+            "version": "==3.0.3"
+        },
         "flask-restful": {
             "hashes": [
                 "sha256:ecd620c5cc29f663627f99e04f17d1f16d095c83dc1d618426e2ad68b03092f8",
@@ -314,6 +321,12 @@
             ],
             "version": "==0.6.0"
         },
+        "peewee": {
+            "hashes": [
+                "sha256:bc879e1ffb7f7684f90d9dd236c77b5042118d079f94764f35e3806948829ac8"
+            ],
+            "version": "==3.9.6"
+        },
         "pycparser": {
             "hashes": [
                 "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"
@@ -416,10 +429,23 @@
         },
         "werkzeug": {
             "hashes": [
-                "sha256:865856ebb55c4dcd0630cdd8f3331a1847a819dda7e8c750d3db6f2aa6c0209c",
-                "sha256:a0b915f0815982fb2a09161cb8f31708052d0951c3ba433ccc5e1aa276507ca6"
+                "sha256:87ae4e5b5366da2347eb3116c0e6c681a0e939a33b2805e2c0cbd282664932c4",
+                "sha256:a13b74dd3c45f758d4ebdb224be8f1ab8ef58b3c0ffc1783a8c7d9f4f50227e6"
             ],
-            "version": "==0.15.4"
+            "version": "==0.15.5"
+        },
+        "wtf-peewee": {
+            "hashes": [
+                "sha256:acd05d136c8595da3327fcf9176fa85fdcec1f2aac51d235e46e6fc7a0871283"
+            ],
+            "version": "==3.0.0"
+        },
+        "wtforms": {
+            "hashes": [
+                "sha256:0cdbac3e7f6878086c334aa25dc5a33869a3954e9d1e015130d65a69309b3b61",
+                "sha256:e3ee092c827582c50877cdbd49e9ce6d2c5c1f6561f849b3b068c1b8029626f1"
+            ],
+            "version": "==2.2.1"
         }
     },
     "develop": {

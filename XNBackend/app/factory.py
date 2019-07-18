@@ -4,7 +4,7 @@ from flask_log_request_id import RequestID
 from XNBackend.task import celery
 from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
-from XNBackend.models import db, LuxSensors
+from XNBackend.models import db, LuxSensors, HeatMapSnapshots, Users, AppearRecords, LatestPosition
 from XNBackend.extension import SaferProxyFix
 from flask_jwt_extended import JWTManager
 from XNBackend.api import api_bp
@@ -43,6 +43,11 @@ def create_app(config_filename=None):
     app.cli.add_command(user_cli)
 
     # flask_restless part
+    print(db)
     restless_manager.create_api(LuxSensors, methods=["GET"])
+    restless_manager.create_api(HeatMapSnapshots, methods=["GET"])
+    restless_manager.create_api(Users, methods=["GET"])
+    restless_manager.create_api(AppearRecords, methods=["GET"])
+    restless_manager.create_api(LatestPosition, methods=["GET"])
 
     return app

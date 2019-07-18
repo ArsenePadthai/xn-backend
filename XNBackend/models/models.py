@@ -54,6 +54,7 @@ class UserLogins(db.Model, TimeStampMixin):
     username = db.Column(Unicode(length=MEDIUM_LEN))
     password = db.Column(String(LONG_LEN))
     level = db.Column(SmallInteger)
+    user_ref = relationship('Users', backref='user_logins')
 
     @property
     def leverl_repr(self):
@@ -95,6 +96,7 @@ class TrackingDevices(db.Model, TimeStampMixin):
                                    ondelete='SET NULL'))
     # 0 means camera, 1 means acs
     device_type = db.Column(SmallInteger)
+    locator_body = relationship('Locators')
 
 
 class AcsRecords(db.Model, TimeStampMixin):
@@ -103,6 +105,7 @@ class AcsRecords(db.Model, TimeStampMixin):
                                            ondelete="CASCADE"))
     status = db.Column(SmallInteger)
     event_type = db.Column(Integer)
+    acs = relationship('TrackingDevices', backref='acs_record')
 
 
 class AppearRecords(db.Model, TimeStampMixin):
@@ -112,6 +115,19 @@ class AppearRecords(db.Model, TimeStampMixin):
                                             ondelete='CASCADE'))
     device_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
                                               ondelete="CASCADE"))
+    user = relationship('Users', backref='appear_record')
+    device = relationship('TrackingDevices', backref='appear_record')
+
+
+class LatestPosition(db.Model, TimeStampMixin):
+    __tablename__ = 'latest_position'
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Integer, ForeignKey(Users.id,
+                                            ondelete='CASCADE'))
+    appear_record_id = db.Column(Integer, ForeignKey(AppearRecords.id,
+                                                     ondelete='SET NULL'))
+    user = relationship('Users', backref='latest_position_pointer')
+    appear_record = relationship('AppearRecords')
 
 
 class HeatMapSnapshots(db.Model, TimeStampMixin):
@@ -120,6 +136,7 @@ class HeatMapSnapshots(db.Model, TimeStampMixin):
     device_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
                                               ondelete="CASCADE"))
     count = db.Column(Integer)
+    device = relationship('TrackingDevices', backref="heatmap_snapshots")
 
 
 class CircuitBreakers(db.Model, TimeStampMixin):
@@ -128,10 +145,12 @@ class CircuitBreakers(db.Model, TimeStampMixin):
     mac = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     name = db.Column(String(SHORT_LEN))
     phone = db.Column(String(SHORT_LEN))
-    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
-                                            ondelete='SET NULL'))
+    locator = db.Column(Unicode(length=MEDIUM_LEN),
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
     room = db.Column(String(SHORT_LEN))
     unit = db.Column(String(SHORT_LEN))
+    locator_body = relationship('Locators')
 
 
 class CircuitRecords(db.Model, TimeStampMixin):
@@ -176,6 +195,7 @@ class CircuitRecords(db.Model, TimeStampMixin):
     cPF = db.Column(Float)
     nA = db.Column(Float)
     nT = db.Column(Float)
+    circuit_breaker = relationship("CircuitBreakers")
 
 
 class LatestCircuitRecord(db.Model):
@@ -200,6 +220,7 @@ class CircuitAlarms(db.Model, TimeStampMixin):
     alarm_or_type = db.Column(String(SHORT_LEN))
     info = db.Column(String(MEDIUM_LEN))
     type_number = db.Column(SmallInteger)
+    circuit_breaker = relationship('CircuitBreakers')
 
     @property
     def alarm_type(self):
@@ -224,7 +245,7 @@ class LatestAlarm(db.Model, TimeStampMixin):
                                                ondelete='CASCADE'), index=True)
     circuit_alarm_id = db.Column(Integer, ForeignKey(CircuitAlarms.id, 
                                                      ondelete='SET NULL'))
-    circuit = relationship('CircuitBreakers')
+    circuit = relationship('CircuitBreakers', backref='latest_alarm')
     alarm = relationship('CircuitAlarms')
 
 
@@ -236,6 +257,8 @@ class EnergyConsumeDaily(db.Model, TimeStampMixin, CarbonMixin):
                                                     ondelete='CASCADE'))
     addr = db.Column(Integer)
     electricity = db.Column(Float)
+    circuit_break_body = relationship('CircuitBreakers',
+                                      backref='daily_consume')
     # 统计时刻电量, 单位 KWH
     # total_electricity = db.Column(Float)
 
@@ -246,6 +269,8 @@ class EnegyConsumeMonthly(db.Model, TimeStampMixin):
     circuit_breaker = db.Column(Integer, ForeignKey(CircuitBreakers.id))
     addr = db.Column(Integer)
     electricity = db.Column(Float)
+    circuit_break_body = relationship('CircuitBreakers',
+                                      backref='monthly_consume')
     # 统计时刻电量, 单位 KWH
     # total_electricity = db.Column(Float)
 
@@ -264,11 +289,15 @@ class IRSensors(db.Model, TimeStampMixin):
     __tablename__ = 'ir_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
-                                            ondelete='SET NULL'))
-    latest_record_id = db.Column(Integer, ForeignKey(IRSensorStatus.id,
-                                                     ondelete="SET NULL"))
-    latest_record = relationship('IRSensorStatus', foreign_keys=[latest_record_id])
+    locator = db.Column(Unicode(length=MEDIUM_LEN),
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
+    latest_record_id = db.Column(Integer,
+                                 ForeignKey(IRSensorStatus.id,
+                                            ondelete="SET NULL"))
+    latest_record = relationship('IRSensorStatus',
+                                 foreign_keys=[latest_record_id])
+    locator_body = relationship('Locators')
 
 
 class AQIValues(db.Model, TimeStampMixin):
@@ -290,11 +319,13 @@ class AQISensors(db.Model, TimeStampMixin):
     __tablename__ = 'aqi_sensors'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
-                                            ondelete='SET NULL'))
+    locator = db.Column(Unicode(length=MEDIUM_LEN), 
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(AQIValues.id,
                                                      ondelete="SET NULL"))
     latest_record = relationship('AQIValues', foreign_keys=[latest_record_id])
+    locator_body = relationship('Locators')
 
 
 class LuxValues(db.Model, TimeStampMixin):
@@ -316,6 +347,7 @@ class LuxSensors(db.Model, TimeStampMixin):
     latest_record_id = db.Column(Integer, ForeignKey(LuxValues.id,
                                                      ondelete="SET NULL"))
     latest_record = relationship('LuxValues', foreign_keys=[latest_record_id])
+    locator_body = relationship('Locators')
 
 
 class FireAlarmStatus(db.Model, TimeStampMixin):
@@ -338,6 +370,7 @@ class FireAlarmSensors(db.Model, TimeStampMixin):
                                  ForeignKey('fire_alarm_status.id',
                                             ondelete='SET NULL'))
     latest_record = relationship('FireAlarmStatus', foreign_keys=[latest_record_id])
+    locator_body = relationship('Locators')
 
 
 class SwitchStatus(db.Model, TimeStampMixin):
@@ -361,7 +394,9 @@ class Switches(db.Model, TimeStampMixin):
     latest_record_id = db.Column(Integer,
                                  ForeignKey('switch_status.id',
                                             ondelete='SET NULL'))
-    latest_record = relationship('SwitchStatus', foreign_keys=[latest_record_id])
+    latest_record = relationship('SwitchStatus', 
+                                 foreign_keys=[latest_record_id])
+    locator_body = relationship('Locators')
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):
@@ -385,5 +420,6 @@ class Elevators(db.Model, TimeStampMixin):
     __tablename__ = 'elevators'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
-                                            ondelete='SET NULL'))
+    locator = db.Column(Unicode(length=MEDIUM_LEN), 
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
