@@ -44,5 +44,5 @@ CELERY_ROUTES = {
     'XNBackend.task.mantunsci.task.circuit_alarm':{"queue":"second", "routing_key":"second"},
 }
 
-#TASK_REJECT_ON_WORKER_LOST = True
-#TASK_ACKS_LATE = True
+CELERY_REJECT_ON_WORKER_LOST = True
+CELERY_ACKS_LATE = True

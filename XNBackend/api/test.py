@@ -1,5 +1,6 @@
 from ._blueprint import api_bp
 from flask import jsonify
+from celery import group
 from XNBackend.task.sensor.task import *
 
 
@@ -7,6 +8,7 @@ from XNBackend.task.sensor.task import *
 def test():
     # network_relay_query.delay()
     # IR_sensor_query.delay()
-    # AQI_sensor_query.delay()
+    AQI_sensor_query.delay()
+    AQI_sensor_query.delay()
     # Lux_sensor_query.delay()
     return jsonify({"hello": "world"})

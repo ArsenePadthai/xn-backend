@@ -1,9 +1,10 @@
 import requests
 import time
 from mantunsci_auth.auth import MantunsciAuthBase
-from XNBackend.task import celery
+from XNBackend.task import celery, logger
 from XNBackend.models.models import db, EnergyConsumeDaily, EnergyConsumeMonthly, CircuitRecords, CircuitBreakers, LatestCircuitRecord, CircuitAlarms, LatestAlarm
 
+L = logger.getChild(__name__)
 
 param = {
     'auth_url':'',
@@ -68,6 +69,7 @@ def power_month():
     record = []
     for data,id in data_generator(0):
         for i in range(len(data))
+            try:
             monthly_record = EnergyConsumeMonthly(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
             record.append(monthly_record)
     db.session.bulk_save_objects(record)

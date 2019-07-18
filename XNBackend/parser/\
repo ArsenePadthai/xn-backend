@@ -15,7 +15,7 @@ def data_parse(bs:bytes):
     start_code_byte, body = bs[:1], bs[1:-1]
     start_code = str(binascii.b2a_hex(start_code_byte))[2:-1]
     data = header_info[start_code].parse(body)
-    return data[0]
+    return data[0], header_info[start_code]._address
 
 
 class AddressParseMixin:
@@ -65,7 +65,7 @@ class AQISensorData(Parsable, Marshallable, AddressParseMixin):
         B:co2Integer, B:co2Decimal, B:tvocInteger, B:tvocDecimal,
         B:vocInteger, B:vocDecimal
     '''
-    
+
     temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal')
     humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal')
     pm = FloatAssembler(integer='pmInteger', decimal='pmDecimal')
