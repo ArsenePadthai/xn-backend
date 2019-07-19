@@ -96,16 +96,21 @@ class TrackingDevices(db.Model, TimeStampMixin):
                                    ondelete='SET NULL'))
     # 0 means camera, 1 means acs
     device_type = db.Column(SmallInteger)
-    locator_body = relationship('Locators')
+    locator_body = relationship('Locators', foreign_keys=[locator])
+    latest_acs_record_id = db.Column(Integer,
+                                     ForeignKey('acs_records.id',
+                                                ondelete='SET NULL'))
+    acs_record = relationship("AcsRecords", foreign_keys=[latest_acs_record_id])
 
 
 class AcsRecords(db.Model, TimeStampMixin):
+    __tablename__ = "acs_records"
     id = db.Column(Integer, primary_key=True)
     acs_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
                                            ondelete="CASCADE"))
     status = db.Column(SmallInteger)
     event_type = db.Column(Integer)
-    acs = relationship('TrackingDevices', backref='acs_record')
+    acs = relationship('TrackingDevices', foreign_keys=[acs_id])
 
 
 class AppearRecords(db.Model, TimeStampMixin):
@@ -205,8 +210,11 @@ class LatestCircuitRecord(db.Model):
                                                ondelete='CASCADE'), index=True)
     circuit_record_id = db.Column(Integer, ForeignKey(CircuitRecords.id,
                                                       ondelete='SET NULL'))
-    circuit_breaker = relationship('CircuitBreakers', backref='latest_record')
-    circuit_record = relationship('CircuitRecords')
+    circuit_breaker = relationship('CircuitBreakers',
+                                   backref='latest_record',
+                                   foreign_keys=[circuit_id])
+    circuit_record = relationship('CircuitRecords',
+                                  foreign_keys=[circuit_record_id])
 
 
 class CircuitAlarms(db.Model, TimeStampMixin):
@@ -397,6 +405,7 @@ class Switches(db.Model, TimeStampMixin):
     latest_record = relationship('SwitchStatus', 
                                  foreign_keys=[latest_record_id])
     locator_body = relationship('Locators')
+    status = relationship("SwitchStatus", foreign_keys=[latest_record_id])
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):
@@ -406,10 +415,10 @@ class ElevatorStatus(db.Model, TimeStampMixin):
                                                 ondelete='CASCADE'))
     floor = db.Column(Integer)
     direction = db.Column(SmallInteger)
-    elevator = relationship('Elevators')
+    elevator = relationship('Elevators', foreign_keys=[elevator_id])
 
     @property
-    def direction(self):
+    def readable_direction(self):
         mapping = {1: "up",
                    2: "down",
                    0: "stop"}
@@ -423,3 +432,7 @@ class Elevators(db.Model, TimeStampMixin):
     locator = db.Column(Unicode(length=MEDIUM_LEN), 
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
+    latest_record_id = db.Column(Integer, ForeignKey('elevator_status.id',
+                                                     ondelete='SET NULL'))
+    latest_record = relationship('ElevatorStatus',
+                                 foreign_keys=[latest_record_id])
