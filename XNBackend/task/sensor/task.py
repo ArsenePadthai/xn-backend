@@ -51,12 +51,11 @@ def data_generator(model):
         'Switch':[Switches, 'CC', 6, 'FE EE'], 
         'IR':[IRSensors, 'DA', 3, '86 86 86 EE'], 
         'AQI':[AQISensors, 'DC', 3, '86 86 86 EE'], 
-        'Lux':[LuxSensors, 'DF', 3, '86 86 86 EE']
+        'Lux':[LuxSensors, 'DE', 3, '86 86 86 EE']
     }
 
     length = models[model][0].query.count()
     for items in range(length):
-        time.sleep(2)
         sensor = models[model][0].query.filter_by(id = items+1).first()
         data = bytes.fromhex(models[model][1]) + address_pack(sensor.device_index_code, models[model][2]) + bytes.fromhex(models[model][3])
 

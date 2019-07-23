@@ -9,6 +9,5 @@ def test():
     # network_relay_query.delay()
     # IR_sensor_query.delay()
     AQI_sensor_query.delay()
-    AQI_sensor_query.delay()
     # Lux_sensor_query.delay()
     return jsonify({"hello": "world"})

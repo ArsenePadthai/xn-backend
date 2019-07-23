@@ -1,4 +1,5 @@
 from datetime import timedelta
+from celery.schedules import crontab
 from kombu import Exchange, Queue
 
 DEBUG=True
@@ -46,3 +47,12 @@ CELERY_ROUTES = {
 
 CELERY_REJECT_ON_WORKER_LOST = True
 CELERY_ACKS_LATE = True
+
+CELERYBEAT_SCHEDULE = {
+	'aqi_sensor': {
+		'task': 'XNBackend.task.sensor.task.AQI_sensor_query',
+		'schedule': crontab(minute='*'),
+		'args': ()
+	}
+}
+

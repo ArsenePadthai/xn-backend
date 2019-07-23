@@ -11,7 +11,6 @@ hostname = ''
 port = ''
 app_key = ''
 app_secret = ''
-signature_headers = ''
 s = None
 
 
@@ -19,13 +18,14 @@ def req_session():
     global s
     if s is None:
         s = requests.Session()
-        s.auth = HIKVisionAuth(app_key, app_secret, signature_headers)
+        s.auth = HIKVisionAuth(app_key, app_secret)
     return s
 
 
 def data_requests(url, body):
     s = req_session()
-    r = s.post('https://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body)    
+    date = time.strftime('%a %b %d %H:%M:%S %Z %Y', time.localtime())
+    r = s.post('https://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, headers={'Date':date})    
     message = r.json
     return message['data']
 
