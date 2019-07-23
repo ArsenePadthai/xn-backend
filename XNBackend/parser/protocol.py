@@ -17,13 +17,13 @@ def data_parse(bs:bytes):
     data = header_info[start_code].parse(body)
     return data[0]
 
-
+'''
 class AddressParseMixin:
     @property
     def _address(self):
         assert len(self.address) == 5
         return unpack('>Q', b'\x00\x00\x00' + self.address)[0] & 0xffffffffff
-
+'''
 
 class NetworkRelayData(Parsable, Marshallable):
     fields = '''
@@ -37,9 +37,9 @@ class NetworkRelayData(Parsable, Marshallable):
         LoadDetect = fields.Integer(attribute='loadDetect')
 
 
-class InfraredSensorData(Parsable, Marshallable, AddressParseMixin):
+class InfraredSensorData(Parsable, Marshallable):
     fields = '''
-        5s:address, B:delay, B:status
+        H:address, B:detectValue, B:setValue, B:delay, B:status
     '''
 
     class MarshalSchema(Schema):
@@ -58,9 +58,9 @@ class FloatAssembler:
         d = getattr(instance, self.decimal)
         return float('%d.%d' % (i, d))
 
-class AQISensorData(Parsable, Marshallable, AddressParseMixin):
+class AQISensorData(Parsable, Marshallable):
     fields = '''
-        5s:address, B:temperatureInteger, B:temperatureDecimal,
+        H:address, B:temperatureInteger, B:temperatureDecimal,
         B:humidityInteger, B:humidityDecimal,  B:pmInteger, B:pmDecimal,
         B:co2Integer, B:co2Decimal, B:tvocInteger, B:tvocDecimal,
         B:vocInteger, B:vocDecimal
@@ -89,14 +89,15 @@ class AQISensorData(Parsable, Marshallable, AddressParseMixin):
         VocDecimal = fields.Integer(attribute='vocDecimal')
 
 
-class LuxSensorData(Parsable, Marshallable, AddressParseMixin):
+class LuxSensorData(Parsable, Marshallable):
     fields = '''
-        5s:address, H:luxHigh, I:luxLow
+        H:address, B:lux
     '''
-
+    '''
     @property
     def lux(self):
         return self.luxHigh << 32 | self.luxLow
+    '''
 
     class MarshalSchema(Schema):
         Address = fields.String(attribute='address')

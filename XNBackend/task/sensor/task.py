@@ -42,22 +42,22 @@ def send_to_server(data):
     return message
 
 
-def address_pack(address, n):
-    return pack('>Q', int(address) & 0xffffffffff)[n:]
+# def address_pack(address, n):
+#     return pack('>Q', int(address) & 0xffffffffff)[n:]
 
 
 def data_generator(model):
     models = {
-        'Switch':[Switches, 'CC', 6, 'FE EE'], 
-        'IR':[IRSensors, 'DA', 3, '86 86 86 EE'], 
-        'AQI':[AQISensors, 'DC', 3, '86 86 86 EE'], 
-        'Lux':[LuxSensors, 'DE', 3, '86 86 86 EE']
+        'Switch':[Switches, 'CC', 'FE EE'], 
+        'IR':[IRSensors, 'DA', '86 86 86 EE'], 
+        'AQI':[AQISensors, 'DC', '86 86 86 EE'], 
+        'Lux':[LuxSensors, 'DE', '86 86 86 EE']
     }
 
     length = models[model][0].query.count()
     for items in range(length):
         sensor = models[model][0].query.filter_by(id = items+1).first()
-        data = bytes.fromhex(models[model][1]) + address_pack(sensor.device_index_code, models[model][2]) + bytes.fromhex(models[model][3])
+        data = bytes.fromhex(models[model][1]) + pack('>H', int(sensor.device_index_code)) + bytes.fromhex(models[model][2])
 
         L.info("Query the status of %s, send '%s' to the server", model, data)
         recv_data = send_to_server(data)
@@ -65,9 +65,9 @@ def data_generator(model):
         if model == 'Switch':
             L.info('Received data from %s at id of %s: %s', model, recv_data.id, recv_data)
         else:
-            L.info('Received data from %s at address of %s: %s', model, recv_data._address, recv_data)
+            L.info('Received data from %s at address of %s: %s', model, recv_data.address, recv_data)
 
-        yield recv_data, sensor.id
+        yield recv_data, sensor 
 
 
 @celery.task()
@@ -88,57 +88,53 @@ def network_relay_control(id, channel, code):
 
 @celery.task()
 def network_relay_query():
-    records = []
+    for switch, sensor in data_generator('Switch'):
+        record = SwitchStatus(sensor_id=sensor.id, value=switch.status, load=switch.loadDetect)
+        db.session.add(record)
+        db.session.commit()
+        sensor.latest_record_id = record.id
+        db.session.commit()
 
-    for switch, id in data_generator('Switch'):
-        record = SwitchStatus(sensor_id=id, value=switch.status, load=switch.loadDetect)
-        records.append(record)
-
-    db.session.bulk_save_objects(records)
-    db.session.commit()
     L.info('Switch: data stored')
-    return id
+    return ''
 
 
 @celery.task()
 def IR_sensor_query():
-    records = []
+    for ir, sensor in data_generator('IR'):
+        record = IRSensorStatus(sensor_id=sensor.id, value=ir.status)
+        db.session.add(record)
+        db.session.commit()
+        sensor.latest_record_id = record.id
+        db.session.commit()
 
-    for ir, id in data_generator('IR'):
-        record = IRSensorStatus(sensor_id=id, value=ir.status)
-        records.append(record)
-
-    db.session.bulk_save_objects(records)
-    db.session.commit()
     L.info('IR: data stored')
-    return id
+    return ''
 
 
 @celery.task()
 def AQI_sensor_query():
-    records = []
+    for aqi, sensor in data_generator('AQI'):
+        record = AQIValues(sensor_id=sensor.id, temperature=aqi.temperature, humidity=aqi.humidity, pm25=aqi.pm, co2=aqi.co2, tvoc=aqi.tvoc, voc=aqi.voc)
+        db.session.add(record)
+        db.session.commit()
+        sensor.latest_record_id = record.id
+        db.session.commit()
 
-    for aqi, id in data_generator('AQI'):
-        record = AQIValues(sensor_id=id, temperature=aqi.temperature, humidity=aqi.humidity, pm25=aqi.pm, co2=aqi.co2, tvoc=aqi.tvoc, voc=aqi.voc)
-        records.append(record)
-
-    db.session.bulk_save_objects(records)
-    db.session.commit()
     L.info('AQI: data stored')
-    return id
+    return ''
 
 
 @celery.task()
 def Lux_sensor_query():
-    records = []
+    for luxdata, sensor in data_generator('Lux'):
+        record = LuxValues(sensor_id=sensor.id, value=luxdata.lux)
+        db.session.add(record)
+        db.session.commit()
+        sensor.latest_record_id = record.id
+        db.session.commit()
 
-    for luxdata, id in data_generator('Lux'):
-        record = LuxValues(sensor_id=id, value=luxdata.lux)
-        records.append(record)
-
-    db.session.bulk_save_objects(records)
-    db.session.commit()
     L.info('Lux: data stored')
-    return id
+    return ''
 
 
