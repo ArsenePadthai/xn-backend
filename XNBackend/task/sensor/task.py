@@ -91,10 +91,10 @@ def network_relay_query():
     for switch, sensor in data_generator('Switch'):
         record = SwitchStatus(sensor_id=sensor.id, value=switch.status, load=switch.loadDetect)
         db.session.add(record)
-        db.session.commit()
+        db.session.flush()
         sensor.latest_record_id = record.id
-        db.session.commit()
 
+    db.session.commit()
     L.info('Switch: data stored')
     return ''
 
@@ -104,10 +104,10 @@ def IR_sensor_query():
     for ir, sensor in data_generator('IR'):
         record = IRSensorStatus(sensor_id=sensor.id, value=ir.status)
         db.session.add(record)
-        db.session.commit()
+        db.session.flush()
         sensor.latest_record_id = record.id
-        db.session.commit()
 
+    db.session.commit()
     L.info('IR: data stored')
     return ''
 
@@ -117,10 +117,10 @@ def AQI_sensor_query():
     for aqi, sensor in data_generator('AQI'):
         record = AQIValues(sensor_id=sensor.id, temperature=aqi.temperature, humidity=aqi.humidity, pm25=aqi.pm, co2=aqi.co2, tvoc=aqi.tvoc, voc=aqi.voc)
         db.session.add(record)
-        db.session.commit()
+        db.session.flush()
         sensor.latest_record_id = record.id
-        db.session.commit()
 
+    db.session.commit()
     L.info('AQI: data stored')
     return ''
 
@@ -130,10 +130,10 @@ def Lux_sensor_query():
     for luxdata, sensor in data_generator('Lux'):
         record = LuxValues(sensor_id=sensor.id, value=luxdata.lux)
         db.session.add(record)
-        db.session.commit()
+        db.session.flush()
         sensor.latest_record_id = record.id
-        db.session.commit()
 
+    db.session.commit()
     L.info('Lux: data stored')
     return ''
 
