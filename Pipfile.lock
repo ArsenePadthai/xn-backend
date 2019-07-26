@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ff0e617a83a49f635a1f2e9e6da2dbfa8a10ee3f4d7e706f3e3171accb5ea265"
+            "sha256": "64bbb541105ef333a06af67077f44aa6aaca81a0c0ae614b38774ee9453dbb3c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -195,13 +195,6 @@
             "index": "pypi",
             "version": "==0.10.0"
         },
-        "flask-peewee": {
-            "hashes": [
-                "sha256:2c09483ac4976ba913cf13ea823b878969da6e3fa886bcaa384d1e3390013b7d"
-            ],
-            "index": "pypi",
-            "version": "==3.0.3"
-        },
         "flask-restful": {
             "hashes": [
                 "sha256:ecd620c5cc29f663627f99e04f17d1f16d095c83dc1d618426e2ad68b03092f8",
@@ -266,9 +259,9 @@
         },
         "mako": {
             "hashes": [
-                "sha256:95ee720cc3453063788515d55bd7ce4a2a77b7b209e4ac70ec5c86091eb02541"
+                "sha256:f5a642d8c5699269ab62a68b296ff990767eb120f51e2e8f3d6afb16bdb57f4b"
             ],
-            "version": "==1.0.13"
+            "version": "==1.0.14"
         },
         "mantunsci-auth": {
             "git": "https://bitbucket.org/huangloong/mantunsci-auth.git",
@@ -320,12 +313,6 @@
                 "sha256:e7f1377efee18c3f562cee54907a3329223c824332889fb74b745ddfd0a9b1c6"
             ],
             "version": "==0.6.0"
-        },
-        "peewee": {
-            "hashes": [
-                "sha256:bc879e1ffb7f7684f90d9dd236c77b5042118d079f94764f35e3806948829ac8"
-            ],
-            "version": "==3.9.6"
         },
         "pycparser": {
             "hashes": [
@@ -409,9 +396,9 @@
         },
         "sqlalchemy": {
             "hashes": [
-                "sha256:c30925d60af95443458ebd7525daf791f55762b106049ae71e18f8dd58084c2f"
+                "sha256:217e7fc52199a05851eee9b6a0883190743c4fb9c8ac4313ccfceaffd852b0ff"
             ],
-            "version": "==1.3.5"
+            "version": "==1.3.6"
         },
         "urllib3": {
             "hashes": [
@@ -433,19 +420,6 @@
                 "sha256:a13b74dd3c45f758d4ebdb224be8f1ab8ef58b3c0ffc1783a8c7d9f4f50227e6"
             ],
             "version": "==0.15.5"
-        },
-        "wtf-peewee": {
-            "hashes": [
-                "sha256:acd05d136c8595da3327fcf9176fa85fdcec1f2aac51d235e46e6fc7a0871283"
-            ],
-            "version": "==3.0.0"
-        },
-        "wtforms": {
-            "hashes": [
-                "sha256:0cdbac3e7f6878086c334aa25dc5a33869a3954e9d1e015130d65a69309b3b61",
-                "sha256:e3ee092c827582c50877cdbd49e9ce6d2c5c1f6561f849b3b068c1b8029626f1"
-            ],
-            "version": "==2.2.1"
         }
     },
     "develop": {

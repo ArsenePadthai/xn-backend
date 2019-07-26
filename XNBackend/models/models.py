@@ -86,6 +86,13 @@ class Locators(db.Model, TimeStampMixin):
     coorZ = db.Column(Float, nullable=True)
 
 
+class TcpConfig(db.Model, TimeStampMixin):
+    __tablename__ = 'tcp_config'
+    id = db.Column(Integer, primary_key=True)
+    ip = db.Column(String(MEDIUM_LEN))
+    port = db.Column(Integer)
+
+
 class TrackingDevices(db.Model, TimeStampMixin):
     __tablename__ = 'tracking_devices'
     id = db.Column(Integer, primary_key=True)
@@ -288,7 +295,8 @@ class IRSensorStatus(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     sensor_id = db.Column(Integer, ForeignKey("ir_sensors.id",
                                               ondelete="CASCADE"))
-    value = db.Column(BOOLEAN)
+    value = db.Column(db.Integer)
+    status = db.Column(db.BOOLEAN)
     sensor = relationship('IRSensors', foreign_keys=[sensor_id])
 
 
@@ -296,16 +304,22 @@ class IRSensorStatus(db.Model, TimeStampMixin):
 class IRSensors(db.Model, TimeStampMixin):
     __tablename__ = 'ir_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    batch_no = db.Column(db.Integer)
+    addr_no = db.Column(db.Integer)
     locator = db.Column(Unicode(length=MEDIUM_LEN),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     latest_record_id = db.Column(Integer,
                                  ForeignKey(IRSensorStatus.id,
                                             ondelete="SET NULL"))
+    threshold = db.Column(db.Integer)
+    delay = db.Column(db.Integer)
+    ip_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+                                                 ondelete='SET NULL'))
+    ip_config = relationship('TcpConfig', foreign_keys=[ip_config_id])
     latest_record = relationship('IRSensorStatus',
                                  foreign_keys=[latest_record_id])
-    locator_body = relationship('Locators')
+    locator_body = relationship('Locators', foreign_keys=[locator])
 
 
 class AQIValues(db.Model, TimeStampMixin):
@@ -349,13 +363,18 @@ class LuxValues(db.Model, TimeStampMixin):
 class LuxSensors(db.Model, TimeStampMixin):
     __tablename__ = 'lux_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
-                                            ondelete='SET NULL'))
+    batch_no = db.Column(db.Integer)
+    addr_no = db.Column(db.Integer)
+    locator = db.Column(Unicode(length=MEDIUM_LEN),
+                        ForeignKey(Locators.internal_code,
+                                   ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(LuxValues.id,
                                                      ondelete="SET NULL"))
     latest_record = relationship('LuxValues', foreign_keys=[latest_record_id])
     locator_body = relationship('Locators')
+    ip_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+                                                 ondelete='SET NULL'))
+    ip_config = relationship('TcpConfig', foreign_keys=[ip_config_id])
 
 
 class FireAlarmStatus(db.Model, TimeStampMixin):

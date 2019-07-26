@@ -46,6 +46,7 @@ def upgrade():
                existing_type=mysql.TINYINT(display_width=1),
                type_=sa.BOOLEAN(),
                existing_nullable=True)
+    op.drop_constraint(u'user_logins_ibfk_1', 'user_logins', type_='foreignkey')
     op.alter_column('user_logins', 'user_id',
                existing_type=mysql.VARCHAR(length=50),
                type_=sa.Integer(),

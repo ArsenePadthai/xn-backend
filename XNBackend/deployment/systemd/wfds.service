@@ -6,9 +6,9 @@ after=network.target
 WantedBy=multi-user.target
 
 [Service]
-User=ser
-PIDFile=/var/run/wfds.pid
-WorkingDirectory=/home/ser/wf-dashboard
+User=web
+PIDFile=/var/run/xnback.pid
+WorkingDirectory=/home/web/xn-backend
 ExecStart= /home/ser/.local/share/virtualenvs/wf-dashboard-OaJQElPa/bin/gunicorn --chdir /home/ser/wf-dashboard -c /etc/wfds/gunicorn.conf WFDashboard.app.entry:app
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
