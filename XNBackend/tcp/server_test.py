@@ -26,11 +26,11 @@ def lux_send(data1_bytes):
     data2_bytes = bytes.fromhex('33 EE')
     client.send(data0_bytes+data1_bytes+data2_bytes) 
 
-
+client = None
 bind_ip = "0.0.0.0"
-bind_port = 51113
 
-try:
+def tcp_server(bind_port):
+    global client
     server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     server.bind((bind_ip,bind_port))
     server.listen(5)
@@ -43,7 +43,7 @@ try:
         #infrared_send(data[1:3])
         #aqi_send(data[1:3])
         lux_send(data[1:3])
-except Exception:
-    server.close()
 
-
+if __name__ == '__main__':
+    import sys
+    tcp_server(int(sys.argv[1]))

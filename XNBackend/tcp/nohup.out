@@ -1,0 +1,12 @@
+[*] Acception connection from 127.0.0.1:57054
+b'\xde\x00\x01\x86\x86\x86'
+[*] Acception connection from 127.0.0.1:52698
+b'\xde\x00\x02\x86\x86\x86'
+[*] Acception connection from 127.0.0.1:42630
+b'\xde\x00\x03\x86\x86\x86\xee'
+[*] Acception connection from 127.0.0.1:53182
+b'\xde\x00\x02\x86\x86\x86'
+[*] Acception connection from 127.0.0.1:57538
+b'\xde\x00\x01\x86\x86\x86\xee'
+[*] Acception connection from 127.0.0.1:43112
+b'\xde\x00\x03\x86\x86\x86'
