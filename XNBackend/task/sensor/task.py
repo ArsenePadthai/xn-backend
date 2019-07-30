@@ -5,7 +5,7 @@ from struct import pack
 from XNBackend.task import celery, logger
 from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchStatus
 from XNBackend.parser.protocol import data_parse
-#from celery.signals import celeryd_init
+from celery.signals import celeryd_init
 
 
 L = logger.getChild(__name__)
@@ -20,16 +20,16 @@ def tcp_client(host, port):
     client.connect((host, port))   
     L.info('Connected to %s: %s', host, port)
     
-'''
+
 @celeryd_init.connect 
-def configure_workers(sender=None, conf=None, **kwargs):
-    if sender == 'worker@1':
-        tcp_client('127.0.0.1', 51111)
-    elif sender == 'worker@2':
-        tcp_client('127.0.0.1', 51112)
-    elif sender == 'worker@3':
-        tcp_client('127.0.0.1', 51113)
-'''
+def configure_workers(sender=None, **kwargs):
+    global client
+    try:
+        addr = sender.split('@')[1].split(':')
+        tcp_client(addr[0], int(addr[1]))
+    except Exception:
+        client = None
+
 
 def send_to_server(data, host, port):
     if client == None:
@@ -61,7 +61,6 @@ def data_generate(model):
 
 @celery.task(bind=True, serializer='pickle')
 def network_relay_control(self, id, channel, code):
-    global client 
     data = bytes.fromhex('AA') + pack('>H', id) + pack('>B', channel) + pack('>B', code) + bytes.fromhex('EE')
 
     L.info("Control switch, send '%s' to id: %d", data, id)
@@ -69,7 +68,6 @@ def network_relay_control(self, id, channel, code):
         recv_data = send_to_server(data)
         L.info('Received data from Switch at id of %s: %s', recv_data.id, recv_data)
     except Exception:
-        client = None
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
 
@@ -86,7 +84,6 @@ def network_relay_control(self, id, channel, code):
 
 @celery.task(bind=True, serializer='pickle')
 def sensor_query(self, sensor_name, query_data, sensor):
-    global client
     task = {
         'Switch':[SwitchStatus, {
             'value': 'status',
@@ -112,7 +109,6 @@ def sensor_query(self, sensor_name, query_data, sensor):
     try:
         data = send_to_server(query_data, sensor.ip_config.ip, sensor.ip_config.port)
     except Exception:
-        client = None
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
 

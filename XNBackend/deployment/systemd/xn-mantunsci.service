@@ -1,5 +1,5 @@
 [Unit]
-Description=Restart celery worker2
+Description=Restart celery worker
 
 [Service]
 Type=simple
