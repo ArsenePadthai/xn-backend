@@ -6,9 +6,5 @@ from XNBackend.task.sensor.task import *
 
 @api_bp.route('/test', methods=['GET'])
 def test():
-    # network_relay_query.delay()
-    # IR_sensor_query.delay()
-    # AQI_sensor_query.delay()
-    # Lux_sensor_query.delay()
-    tasks_route.delay('Lux')
+    tasks_route.delay('IR')
     return jsonify({"hello": "world"})

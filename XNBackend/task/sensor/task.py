@@ -5,7 +5,8 @@ from struct import pack
 from XNBackend.task import celery, logger
 from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchStatus
 from XNBackend.parser.protocol import data_parse
-from celery.signals import celeryd_init
+#from celery.signals import celeryd_init
+
 
 L = logger.getChild(__name__)
 
@@ -19,7 +20,7 @@ def tcp_client(host, port):
     client.connect((host, port))   
     L.info('Connected to %s: %s', host, port)
     
-
+'''
 @celeryd_init.connect 
 def configure_workers(sender=None, conf=None, **kwargs):
     if sender == 'worker@1':
@@ -28,20 +29,15 @@ def configure_workers(sender=None, conf=None, **kwargs):
         tcp_client('127.0.0.1', 51112)
     elif sender == 'worker@3':
         tcp_client('127.0.0.1', 51113)
+'''
 
-
-def send_to_server(data, id):
-    global client 
-    try:
-        client.send(data)
-        data_byte = client.recv(1024)
-        message = data_parse(data_byte)
-        L.info('Received data: %s', message)
-    except Exception:
-        celery.control.broadcast('shutdown', destination=['worker@{}'.format(id)])
-        celery.control.broadcast('shutdown', destination=['worker@{}'.format(id)])
-        client = None
-        L.error('Failed to connected, worker is restarted')
+def send_to_server(data, host, port):
+    if client == None:
+        tcp_client(host, port)
+    client.send(data)
+    data_byte = client.recv(1024)
+    message = data_parse(data_byte)
+    L.info('Received data: %s', message)
 
     return message
 
@@ -58,94 +54,88 @@ def data_generate(model):
         'Lux':[LuxSensors, 'DE', '86 86 86 EE']
     }
 
-    length = models[model][0].query.count()
-    for items in range(length):
-        sensor = models[model][0].query.filter_by(id = items+1).first()
-        data = bytes.fromhex(models[model][1]) + pack('>H', int(sensor.device_index_code)) + bytes.fromhex(models[model][2])
-
+    for sensor in models[model][0].query.order_by():
+        data = bytes.fromhex(models[model][1]) + pack('>B', sensor.batch_no) + pack('>B', sensor.addr_no)+ bytes.fromhex(models[model][2])
         yield data, sensor
 
 
-@celery.task(serializer='pickle')
-def network_relay_control(id, channel, code):
-    data = bytes.fromhex('AA') + bytes.fromhex(id) + bytes.fromhex(channel) + bytes.fromhex(code) + bytes.fromhex('EE')
+@celery.task(bind=True, serializer='pickle')
+def network_relay_control(self, id, channel, code):
+    global client 
+    data = bytes.fromhex('AA') + pack('>H', id) + pack('>B', channel) + pack('>B', code) + bytes.fromhex('EE')
 
     L.info("Control switch, send '%s' to id: %d", data, id)
-    recv_data = send_to_server(data)
-    L.info('Received data from Switch at id of %s: %s', recv_data.id, recv_data)
+    try:
+        recv_data = send_to_server(data)
+        L.info('Received data from Switch at id of %s: %s', recv_data.id, recv_data)
+    except Exception:
+        client = None
+        celery.control.pool_restart(destination=[self.request.hostname])
+        self.retry(countdown=3.0)
 
     switch = Switches.query.filter_by(device_index_code = recv_data.id).first()
     record = SwitchStatus(sensor_id=switch.id, value=recv_data.status, load=recv_data.loadDetect)
     db.session.add(record)
+    db.session.flush()
+    switch.latest_record_id = record.id
+    db.session.add(switch)
     db.session.commit()
     L.info('Switch: control successfully')
-    return switch.id
+    return ''
 
 
-@celery.task(serializer='pickle')
-def network_relay_query(data, sensor):
-    switch = send_to_server(data, sensor.id)
-    L.info("Query the status of switch, send '%s' to the server", data)
-    record = SwitchStatus(sensor_id=sensor.id, value=switch.status, load=switch.loadDetect)
+@celery.task(bind=True, serializer='pickle')
+def sensor_query(self, sensor_name, query_data, sensor):
+    global client
+    task = {
+        'Switch':[SwitchStatus, {
+            'value': 'status',
+            'load': 'loadDetect'
+        }],
+        'IR':[IRSensorStatus, {
+            'value': 'status'
+        }], 
+        'AQI':[AQIValues, {
+            'temperature': 'temperature',
+            'humidity': 'humidity',
+            'pm25': 'pm',
+            'co2': 'co2',
+            'tvoc': 'tvoc',
+            'voc': 'voc'
+        }], 
+        'Lux':[LuxValues, {
+            'value': 'lux'
+        }]
+    }
+
+    L.info("Query the status of %s, send '%s' to the server", sensor_name, query_data)
+    try:
+        data = send_to_server(query_data, sensor.ip_config.ip, sensor.ip_config.port)
+    except Exception:
+        client = None
+        celery.control.pool_restart(destination=[self.request.hostname])
+        self.retry(countdown=3.0)
+
+    data_args = {
+        k: getattr(data, v) for k,v in task[sensor_name][1].items()
+    }
+    record = task[sensor_name][0](sensor_id=sensor.id, **data_args)
     db.session.add(record)
     db.session.flush()
     sensor.latest_record_id = record.id
     db.session.add(sensor)
     db.session.commit()
-    return record.id
-
-
-@celery.task(serializer='pickle')
-def IR_sensor_query(data, sensor):
-    ir = send_to_server(data, sensor.id)
-    L.info("Query the status of ir, send '%s' to the server", data)
-    record = IRSensorStatus(sensor_id=sensor.id, value=ir.status)
-    db.session.add(record)
-    db.session.flush()
-    sensor.latest_record_id = record.id
-    db.session.add(sensor)
-    db.session.commit()
-    return record.id
-
-
-@celery.task(serializer='pickle')
-def AQI_sensor_query(data, sensor):
-    aqi = send_to_server(data, sensor.id)
-    L.info("Query the status of aqi, send '%s' to the server", data)
-    record = AQIValues(sensor_id=sensor.id, temperature=aqi.temperature, humidity=aqi.humidity, pm25=aqi.pm, co2=aqi.co2, tvoc=aqi.tvoc, voc=aqi.voc)
-    db.session.add(record)
-    db.session.flush()
-    sensor.latest_record_id = record.id
-    db.session.add(sensor)
-    db.session.commit()
-    return record.id
-
-
-@celery.task(serializer='pickle')
-def Lux_sensor_query(data, sensor):
-    luxdata = send_to_server(data, sensor.id)
-    L.info("Query the status of lux, send '%s' to the server", data)
-    record = LuxValues(sensor_id=sensor.id, value=luxdata.lux)
-    db.session.add(record)
-    db.session.flush()
-    sensor.latest_record_id = record.id
-    db.session.add(sensor)
-    db.session.commit()
-    return record.id
+    return ''
 
 
 @celery.task()
-def tasks_route(sensor_name: str):
-    task = {
-        'Switch':network_relay_query, 
-        'IR':IR_sensor_query, 
-        'AQI':AQI_sensor_query, 
-        'Lux':Lux_sensor_query
-    }
+def tasks_route(sensor_name: str, id=None, channel=None, code=None):
+    if sensor_name == 'SwitchControl':
+        sensor = Switches.query.filter_by(id = id).first()
+        network_relay_control.apply_async(args = [id, channel, code], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
 
     for data, sensor in data_generate(sensor_name):
-        task[sensor_name].apply_async(args=[data, sensor], queue=str(sensor.id))
-        time.sleep(3)
+        sensor_query.apply_async(args = [sensor_name, data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
 
     L.info('data stored')
     return ''
