@@ -12,8 +12,26 @@ from XNBackend.extension import SaferProxyFix
 from flask_jwt_extended import JWTManager
 from XNBackend.api import api_bp
 import flask_restless
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, verify_jwt_in_request
 from XNBackend.cli import user_cli
+from flask import request
+
+
+
+
+def check_auth(*args, **kw):
+    verify_jwt_in_request()
+
+
+preprocessors = {
+    "POST": [check_auth],
+    "GET_SINGLE": [check_auth],
+    "GET_MANY": [check_auth],
+    "PATCH_SINGLE": [check_auth],
+    "PATCH_MANY": [check_auth],
+    "DELETE_SINGLE": [check_auth],
+    "DELETE_MANY": [check_auth]
+}
 
 
 def create_app(config_filename=None):
@@ -41,7 +59,8 @@ def create_app(config_filename=None):
 
     app.register_blueprint(api_bp)
 
-    restless_manager = flask_restless.APIManager(app, flask_sqlalchemy_db=db)
+    restless_manager = flask_restless.APIManager(app,
+                                                 flask_sqlalchemy_db=db)
     JWTManager(app)
     app.cli.add_command(user_cli)
 
@@ -49,7 +68,8 @@ def create_app(config_filename=None):
     restless_manager.create_api(LuxSensors, methods=["GET"])
     restless_manager.create_api(HeatMapSnapshots, methods=["GET"])
     restless_manager.create_api(Users, methods=["GET"])
-    restless_manager.create_api(AppearRecords, methods=["GET"])
+    restless_manager.create_api(AppearRecords, methods=["GET"],
+                                preprocessors=preprocessors)
     restless_manager.create_api(LatestPosition, methods=["GET"])
     restless_manager.create_api(TrackingDevices, methods=["GET"])
     restless_manager.create_api(LatestCircuitRecord, methods=["GET"])
