@@ -44,9 +44,7 @@ def data_requests(body):
 
 def data_generator(n):
     global all_body
-    count = CircuitBreakers.query.count()
-    for i in range(count):
-        circuit = CircuitBreakers.query.filter_by(id = i+1).first()
+    for circuit in CircuitBreakers.query.order_by():
         all_body[n]['mac'] = circuit.mac
         data = data_requests(all_body[n])
         yield data, circuit.id

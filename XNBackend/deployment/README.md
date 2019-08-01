@@ -7,6 +7,8 @@ refer to pakdev's hack
 
 ### Start Worker
 
+* Modify WorkingDirectory and path of pipenv in systemd files
+
 ```python -m XNBackend.task.sensor.start```
 
 ### Stop Worker
