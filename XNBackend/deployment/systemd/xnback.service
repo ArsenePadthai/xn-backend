@@ -1,5 +1,5 @@
 [Unit]
-Description=Admin Dashboard For WF
+Description=API server for xn project
 after=network.target
 
 [Install]
@@ -9,7 +9,7 @@ WantedBy=multi-user.target
 User=web
 PIDFile=/var/run/xnback.pid
 WorkingDirectory=/home/web/xn-backend
-ExecStart= /home/ser/.local/share/virtualenvs/wf-dashboard-OaJQElPa/bin/gunicorn --chdir /home/ser/wf-dashboard -c /etc/wfds/gunicorn.conf WFDashboard.app.entry:app
+ExecStart= /home/web/.local/share/virtualenvs/xn-backend-LQJphCxc/bin/gunicorn --chdir /home/web/xn-backend -c /etc/xnback/gunicorn.conf XNBackend.app.entry:app
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
 Restart=on-failure

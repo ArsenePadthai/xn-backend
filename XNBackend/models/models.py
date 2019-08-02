@@ -117,6 +117,7 @@ class AcsRecords(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     acs_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
                                            ondelete="CASCADE"))
+    # status =1 means open status=0 means closing
     status = db.Column(SmallInteger)
     event_type = db.Column(Integer)
     acs = relationship('TrackingDevices', foreign_keys=[acs_id])
@@ -357,12 +358,13 @@ class AQISensors(db.Model, TimeStampMixin):
     latest_record = relationship('AQIValues', foreign_keys=[latest_record_id])
     locator_body = relationship('Locators')
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
-                                                 ondelete='set null'))
+                                                  ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
     # 链接开关的id
     switch_id = db.Column(Integer, ForeignKey("switches.id",
                                               ondelete="SET NULL"))
+
 
 class AQIEventCount(db.Model):
     __tablename__ = "aqi_event_count"
@@ -395,7 +397,7 @@ class LuxSensors(db.Model, TimeStampMixin):
     latest_record = relationship('LuxValues', foreign_keys=[latest_record_id])
     locator_body = relationship('Locators')
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
-                                                 ondelete='set null'))
+                                                  ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
 
