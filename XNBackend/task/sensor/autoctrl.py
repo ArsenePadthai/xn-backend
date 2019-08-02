@@ -6,13 +6,13 @@ from XNBackend.models.models import db, IREventCount, AQIEventCount, LuxEventCou
 default_value = 10000
 
 def sensor_light(sensor_name):  
-    for data, sensor in data_generate(sensor_name):
-        model = {
-            'IR':[IREventCount, ir_id, status],
-            'Lux':[LuxEventCount, lux_id, value],
-            'AQI':[AQIEventCount, aqi_id, status],
-        }
+    model = {
+        'IR':[IREventCount, ir_id, status],
+        'Lux':[LuxEventCount, lux_id, value],
+        'AQI':[AQIEventCount, aqi_id, status],
+    }
 
+    for data, sensor in data_generate(sensor_name):
         sensor_query.apply_async(args = [sensor_name, data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
         event = model[sensor_name][0].query.filter_by(model[sensor_name][1] = sensor.id).first()
         if sensor.latest_record.model[sensor_name][2] == 0 or sensor.latest_record.model[sensor_name][2]>= default_value:
@@ -42,12 +42,34 @@ def switch_light():
 
  
 @celery.task()
-def night_control():
+def auto_control(sensor_name):
     switch_light()
-    sensor_light('IR')
+    sensor_light(sensor_name)
 
 
 @celery.task()
-def day_control():
-    switch_light()
-    sensor_light('Lux')
+def init_control():
+    sensor_name = ['IR', 'Lux', 'AQI']
+    model = {
+        'IR':[IREventCount, ir_id, status],
+        'Lux':[LuxEventCount, lux_id, value],
+        'AQI':[AQIEventCount, aqi_id, status],
+    }
+
+    for data, sensor in data_generate('Switch'):
+        flag = SwitchFlag.query.filter_by(switch_id = sensor.id).first()
+        flag.latest_status = sensor.latest_record.value
+        flag.manual = 0
+        flag.touch = 0
+    db.session.commit()
+
+    for i in range(3):
+        for data, sensor in data_generate(sensor_name[i]):
+        sensor_query.apply_async(args = [sensor_name[i], data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
+        event = model[sensor_name[i]][0].query.filter_by(model[sensor_name[i]][1] = sensor.id).first()
+        if sensor.latest_record.model[sensor_name[i]][2] == 0 or sensor.latest_record.model[sensor_name[i]][2]>= default_value:
+            event.count = 1
+        else:
+            event.count = 0
+        db.session.commit()
+    
