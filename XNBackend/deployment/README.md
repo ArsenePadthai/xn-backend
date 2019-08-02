@@ -9,8 +9,8 @@ refer to pakdev's hack
 
 * Modify WorkingDirectory and path of pipenv in systemd files
 
-```python -m XNBackend.task.sensor.start```
+```flask systemd control --code start```
 
 ### Stop Worker
 
-```python -m XNBackend.task.sensor.stop```
+```flask systemd control --code stop```

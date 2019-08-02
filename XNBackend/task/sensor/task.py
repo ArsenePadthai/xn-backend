@@ -1,5 +1,4 @@
 import socket
-import time
 import pickle
 from struct import pack
 from XNBackend.task import celery, logger
@@ -90,7 +89,8 @@ def sensor_query(self, sensor_name, query_data, sensor):
             'load': 'loadDetect'
         }],
         'IR':[IRSensorStatus, {
-            'value': 'status'
+            'value': 'detectValue',
+            'status': 'status'
         }], 
         'AQI':[AQIValues, {
             'temperature': 'temperature',
@@ -121,7 +121,7 @@ def sensor_query(self, sensor_name, query_data, sensor):
     sensor.latest_record_id = record.id
     db.session.add(sensor)
     db.session.commit()
-    return ''
+    return '' 
 
 
 @celery.task()

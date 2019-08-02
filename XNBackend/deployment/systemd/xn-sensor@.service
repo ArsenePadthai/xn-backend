@@ -6,7 +6,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/xn-backend
 Environment=XN_SETTINGS=../settings.cfg
-ExecStart=/home/ubuntu/bin/pipenv run python -m celery -A XNBackend.app worker -B -n worker@%i -Q %i
+ExecStart=/home/ubuntu/bin/pipenv run python -m celery -A XNBackend.app worker -c 2 -B -n worker@%i -Q %i
 Restart=always
 RestartSec=100ms
 

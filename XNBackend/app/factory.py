@@ -13,7 +13,7 @@ from flask_jwt_extended import JWTManager
 from XNBackend.api import api_bp
 import flask_restless
 from flask_jwt_extended import JWTManager, verify_jwt_in_request
-from XNBackend.cli import user_cli
+from XNBackend.cli import user_cli, systemd
 from flask import request
 
 
@@ -63,6 +63,7 @@ def create_app(config_filename=None):
                                                  flask_sqlalchemy_db=db)
     JWTManager(app)
     app.cli.add_command(user_cli)
+    app.cli.add_command(systemd)
 
     # flask_restless part
     restless_manager.create_api(LuxSensors, methods=["GET"])

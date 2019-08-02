@@ -358,7 +358,7 @@ class AQISensors(db.Model, TimeStampMixin):
     locator_body = relationship('Locators')
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                  ondelete='set null'))
-    tcp_config = relationship('tcpconfig', foreign_keys=[tcp_config_id])
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
     # 链接开关的id
     switch_id = db.Column(Integer, ForeignKey("switches.id",
@@ -396,7 +396,7 @@ class LuxSensors(db.Model, TimeStampMixin):
     locator_body = relationship('Locators')
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                  ondelete='set null'))
-    tcp_config = relationship('tcpconfig', foreign_keys=[tcp_config_id])
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
 
 class LuxEventCount(db.Model):
@@ -475,7 +475,7 @@ class Switches(db.Model, TimeStampMixin):
 
 class SwitchFlag(db.Model):
     id = db.Column(Integer, primary_key=True)
-    switch_id = db.Column(Integer, )
+    switch_id = db.Column(Integer, ForeignKey(Switches.id, ondelete="CASCADE"))
     latest_status = db.Column(BOOLEAN)
     manual = db.Column(BOOLEAN)
     touch = db.Column(BOOLEAN)
