@@ -39,7 +39,7 @@ def data_requests(body):
     s = req_session()
     r = s.post(param['auth_url'], data=body)    
     message = r.json
-    return message['data']
+    return message
 
 
 def data_generator(n):
@@ -50,11 +50,14 @@ def data_generator(n):
         yield data, circuit.id
 
     
-@celery.task()
-def all_boxes():
+@celery.task(bind=True)
+def all_boxes(self):
     record = []
     body = {'method':'GET_BOXES', 'projectCode':''}
-    data = data_requests(body)
+    try:
+        recv_data = data_requests(body)['data']
+    except Exception:
+        self.retry(countdown=3.0)
     for i in range(len(data)):
         box = CircuitBreakers(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'])
         record.append(box)
@@ -62,22 +65,29 @@ def all_boxes():
     db.session.commit()    
 
 
-@celery.task()
-def power_month():
+@celery.task(bind=True)
+def power_month(self):
     record = []
-    for data,id in data_generator(0):
+    for recv_data,id in data_generator(0):
+        try:
+            data = recv_data['data']
+        except KeyError:
+            self.retry(countdown=3.0)
         for i in range(len(data))
-            try:
             monthly_record = EnergyConsumeMonthly(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
             record.append(monthly_record)
     db.session.bulk_save_objects(record)
     db.session.commit()
 
 
-@celery.task()
-def power_day():
+@celery.task(bind=True)
+def power_day(self):
     record = []
-    for data,id in data_generator(1):
+    for recv_data,id in data_generator(1):
+        try:
+            data = recv_data['data']
+        except KeyError:
+            self.retry(countdown=3.0)
         for i in range(len(data)):
             daily_record = EnergyConsumeDaily(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
             record.append(daily_record)
@@ -125,10 +135,14 @@ column_mappings = {
     'nT': 'nT'
 }
 
-@celery.task()
-def circuit_current():
-    for data,id in data_generator(2):
+@celery.task(bind=True)
+def circuit_current(self):
+    for recv_data,id in data_generator(2):
         record = []
+        try:
+            data = recv_data['data']
+        except KeyError:
+            self.retry(countdown=3.0)
         for i in range(len(data)):
             data_args = {
                 k: data[i].get(v) for k,v in column_mappings.items()
@@ -148,12 +162,16 @@ def circuit_current():
         db.session.commit()
             
     
-@celery.task()
-def circuit_alarm(start_time, end_time):
+@celery.task(bind=True)
+def circuit_alarm(self, start_time, end_time):
     global all_body
     all_body[3]['start'] = start_time
     all_body[3]['end'] = end_time
-    for data,id in data_generator(3):
+    for recv_data,id in data_generator(3):
+        try:
+            data = recv_data['data']
+        except KeyError:
+            self.retry(countdown=3.0)
         for i in range(len(data)):
             alarm_record = CircuitAlarms(id= data[i]['auto_id'], circuit_breaker_id=id, addr=data[i]['addr'], node=data[i]['node'], alarm_or_type=data[i]['type'], info=data[i]['info'], type_number=data[i]['typeNumber'])
             try:

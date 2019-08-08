@@ -27,7 +27,7 @@ def data_requests(url, body):
     date = time.strftime('%a %b %d %H:%M:%S %Z %Y', time.localtime())
     r = s.post('https://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, headers={'Date':date})    
     message = r.json
-    return message['data']
+    return message 
 
 
 column_mappings = {
@@ -47,12 +47,15 @@ column_mappings = {
     'nation': 'nation',
 }
 
-@celery.task()
-def user_store(num, size):
+@celery.task(bind=True)
+def user_store(self, num, size):
     users = []
     url = '/api/resource/v1/person/personList'
     body = json.dumps({'pageNo':num, 'pageSize':size})
-    data = data_requests(url, body)['list']
+    try:
+        data = data_requests(url, body)['data']['list']
+    except Exception:
+        self.retry(countdown=3.0)
     for i in range(len(data)):
         data_args = {
             k: data[i].get(v) for k,v in column_mappings.items()
@@ -84,13 +87,16 @@ device_column_mappings = [
     }
 ]
 
-@celery.task()
-def device_store(num, size, is_acs: int):
+@celery.task(bind=True)
+def device_store(self, num, size, is_acs: int):
     devices = []
     url_camera = '/api/resource/v1/cameras'
     url_acs = '/api/resource/v1/acsDoor/advance/acsDoorList'
     body = json.dumps({'pageNo':num, 'pageSize':size})
-    data = data_requests(url=url_acs if is_acs else url_camera, body)['list']
+    try:
+        data = data_requests(url=url_acs if is_acs else url_camera, body)['data']['list']
+    except Exception:
+        self.retry(countdown=3.0)
 
     for i in range(len(data)):
         data_args = {
@@ -139,11 +145,15 @@ def people_count():
     db.session.commit()    
 
 
-@celery.task()
-def acs_record(num, size, start, end):
+@celery.task(bind=True)
+def acs_record(self, num, size, start, end):
     url = '/api/acs/v1/door/events'
     body = json.dumps({'startTime':start, 'endTime':end, 'pageNo':num, 'pageSize':size})
-    data = data_requests(url, body)['list']
+    try:
+        data = data_requests(url, body)['data']['list']
+    except KeyError:
+        self.retry(countdown=3.0)
+
     for i in range(len(data)):
         device = TrackingDevices.query.filter_by(device_index_code=data[i]['doorIndexCode']).first()
         record = AcsRecords(acs_id=device.id, event_type=data[i]['eventType'])
@@ -168,7 +178,7 @@ def acs_control(doorIndex: list, controlType):
     result = []
     url = '/api/acs/v1/door/doControl'
     body = json.dumps({'doorIndexCodes':doorIndex, 'controlType':controlType})
-    data = data_requests(url, body)
+    data = data_requests(url, body)['data']
 
     for i in range(len(data)):
         result.append({data[i]['doorIndexCode']:data[i]['controlResultCode']})
