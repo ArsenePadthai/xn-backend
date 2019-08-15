@@ -23,17 +23,20 @@ LOG_DIR = './'
 BUNDLE_ERRORS = True
 MAX_CONTENT_LENGTH = 16*1024*1024
 
-low_exchange = Exchange('sensor', type='direct')
-high_exchange = Exchange('mantunsci', type='direct')
+first_exchange = Exchange('sensor', type='direct')
+second_exchange = Exchange('mantunsci', type='direct')
+third_exchange = Exchange('hik', type='direct')
 
 CELERY_QUEUES = (
-	Queue(name='sensor', exchange=low_exchange, routing_key='sensor'),
-	Queue(name='mantunsci', exchange=high_exchange, routing_key='mantunsci')
+	Queue(name='sensor', exchange=first_exchange, routing_key='sensor'),
+	Queue(name='mantunsci', exchange=second_exchange, routing_key='mantunsci'),
+	Queue(name='hik', exchange=third_exchange, routing_key='hik')
 )
 
 CELERY_ROUTES = {
     'XNBackend.task.sensor.task.tasks_route':{"queue":"sensor", "routing_key":"sensor"},
     'XNBackend.task.mantunsci.task.*':{"queue":"mantunsci", "routing_key":"mantunsci"},
+    'XNBackend.task.hik.task.*':{"queue":"hik", "routing_key":"hik"},
 }
 
 

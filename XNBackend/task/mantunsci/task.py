@@ -1,27 +1,26 @@
 import requests
 import time
-from mantunsci_auth.auth import MantunsciAuthBase
+from mantunsci_auth.auth import MantunsciAuthInMemory
 from XNBackend.task import celery, logger
-from XNBackend.models.models import db, EnergyConsumeDaily, EnergyConsumeMonthly, CircuitRecords, CircuitBreakers, LatestCircuitRecord, CircuitAlarms, LatestAlarm
+from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly, CircuitRecords, CircuitBreakers, LatestCircuitRecord, CircuitAlarms, LatestAlarm
 
 L = logger.getChild(__name__)
 
 param = {
-    'auth_url':'',
-    'username':'',
-    'password':'',
-    'app_key':'',
-    'app_secret':'',
-    'project_code':'',
-    'redirect_uri':''
+    'auth_url':'http://192.168.50.117/ebx-rook/',
+    'username':'demo',
+    'password':'1QAZxsw2)(',
+    'app_key':'O000000063',
+    'app_secret':'3EB15ED2C0B6DFDDFAE4CC7BDDB58F0C',
+    'redirect_uri':'http://192.168.50.117:8000/callback'
 }
 
 localtime = time.localtime(time.time())
 all_body = [
     {'method':'GET_BOX_MON_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0]},
     {'method':'GET_BOX_DAY_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0], 'month':localtime[1]},
-    {'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'', 'mac':''}
-    {'method':'GET_BOX_ALARM', 'projectCode':'', 'mac':'', 'start':'', 'end':''},
+    {'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'', 'mac':''},
+    {'method':'GET_BOX_ALARM', 'projectCode':'', 'mac':'', 'start':'', 'end':''}
 ]
 
 s = None
@@ -31,14 +30,14 @@ def req_session():
     global s
     if s is None:
         s = requests.Session()
-        s.auth = MantunsciAuthInMemory(param['auth_url'], param['username'], param['password'], param['app_key'], param['app_secret'], param['project_code'], param['redirect_uri'])
+        s.auth = MantunsciAuthInMemory(param['auth_url'], param['username'], param['password'], param['app_key'], param['app_secret'], param['redirect_uri'])
     return s
 
 
 def data_requests(body):
     s = req_session()
-    r = s.post(param['auth_url'], data=body)    
-    message = r.json
+    r = s.post('http://192.168.50.117/ebx-rook/invoke/router.as', data=body)    
+    message = r.json()
     return message
 
 
@@ -73,7 +72,7 @@ def power_month(self):
             data = recv_data['data']
         except KeyError:
             self.retry(countdown=3.0)
-        for i in range(len(data))
+        for i in range(len(data)):
             monthly_record = EnergyConsumeMonthly(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
             record.append(monthly_record)
     db.session.bulk_save_objects(record)
@@ -190,7 +189,9 @@ def circuit_alarm(self, start_time, end_time):
         db.session.commit()
     
 
-
-
-
+@celery.task()
+def get_token_test():
+    data = {'method':'GET_PROJECTS'}
+    message = data_requests(data)
+    return message
 
