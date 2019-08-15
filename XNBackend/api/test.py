@@ -6,5 +6,5 @@ from XNBackend.task.sensor.task import *
 
 @api_bp.route('/test', methods=['GET'])
 def test():
-    tasks_route.delay('IR')
+    tasks_route.delay('SwitchControl', 10, 1, 0)
     return jsonify({"hello": "world"})

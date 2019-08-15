@@ -39,9 +39,9 @@ CELERY_ROUTES = {
 
 CELERYBEAT_SCHEDULE = {
 	'aqi_sensor': {
-		'task': 'XNBackend.task.sensor.task.AQI_sensor_query',
+		'task': 'XNBackend.task.sensor.task.tasks_route',
 		'schedule': crontab(minute='*'),
-		'args': ()
+		'args': ('Switch')
 	}
 }
 

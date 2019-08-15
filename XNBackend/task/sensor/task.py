@@ -54,28 +54,28 @@ def data_generate(model):
     }
 
     for sensor in models[model][0].query.order_by():
-        data = bytes.fromhex(models[model][1]) + pack('>B', sensor.batch_no) + pack('>B', sensor.addr_no)+ bytes.fromhex(models[model][2])
+        data = bytes.fromhex(models[model][1]) + pack('>B', sensor.batch_no) + pack('>B', sensor.addr_no) + bytes.fromhex(models[model][2])
+        #data = bytes.fromhex(models[model][1]) + pack('>B', int(sensor.device_index_code)) + bytes.fromhex(models[model][2])
         yield data, sensor
 
 
 @celery.task(bind=True, serializer='pickle')
-def network_relay_control(self, id, channel, code):
+def network_relay_control(self, id, channel, code, sensor):
     data = bytes.fromhex('AA') + pack('>H', id) + pack('>B', channel) + pack('>B', code) + bytes.fromhex('EE')
 
     L.info("Control switch, send '%s' to id: %d", data, id)
     try:
-        recv_data = send_to_server(data)
+        recv_data = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
         L.info('Received data from Switch at id of %s: %s', recv_data.id, recv_data)
     except Exception:
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
 
-    switch = Switches.query.filter_by(device_index_code = recv_data.id).first()
-    record = SwitchStatus(sensor_id=switch.id, value=recv_data.status, load=recv_data.loadDetect)
+    record = SwitchStatus(sensor_id=sensor.id, value=recv_data.status, load=recv_data.loadDetect)
     db.session.add(record)
     db.session.flush()
-    switch.latest_record_id = record.id
-    db.session.add(switch)
+    sensor.latest_record_id = record.id
+    db.session.add(sensor)
     db.session.commit()
     L.info('Switch: control successfully')
     return ''
@@ -107,7 +107,7 @@ def sensor_query(self, sensor_name, query_data, sensor):
 
     L.info("Query the status of %s, send '%s' to the server", sensor_name, query_data)
     try:
-        data = send_to_server(query_data, sensor.ip_config.ip, sensor.ip_config.port)
+        data = send_to_server(query_data, sensor.tcp_config.ip, sensor.tcp_config.port)
     except Exception:
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
@@ -127,11 +127,11 @@ def sensor_query(self, sensor_name, query_data, sensor):
 @celery.task()
 def tasks_route(sensor_name: str, id=None, channel=None, code=None):
     if sensor_name == 'SwitchControl':
-        sensor = Switches.query.filter_by(id = id).first()
-        network_relay_control.apply_async(args = [id, channel, code], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
-
-    for data, sensor in data_generate(sensor_name):
-        sensor_query.apply_async(args = [sensor_name, data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
+        sensor = Switches.query.filter_by(device_index_code = id, channel = channel).first()
+        network_relay_control.apply_async(args = [id, channel, code, sensor], queue = sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
+    else:
+        for data, sensor in data_generate(sensor_name):
+            sensor_query.apply_async(args = [sensor_name, data, sensor], queue = sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
 
     L.info('data stored')
     return ''

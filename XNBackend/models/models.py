@@ -316,9 +316,9 @@ class IRSensors(db.Model, TimeStampMixin):
                                             ondelete="SET NULL"))
     threshold = db.Column(db.Integer)
     delay = db.Column(db.Integer)
-    ip_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                  ondelete='SET NULL'))
-    ip_config = relationship('TcpConfig', foreign_keys=[ip_config_id])
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
     latest_record = relationship('IRSensorStatus',
                                  foreign_keys=[latest_record_id])
     locator_body = relationship('Locators', foreign_keys=[locator])
@@ -466,6 +466,9 @@ class Switches(db.Model, TimeStampMixin):
                                            ondelete="SET NULL"))
     aqi_id = db.Column(Integer, ForeignKey(AQISensors.id,
                                            ondelete="SET NULL"))
+    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+                                                  ondelete='set null'))
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
     @property
     def control_type_readable(self):

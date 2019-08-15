@@ -12,7 +12,7 @@ L = logging.getLogger(__name__)
 
 def data_parse(bs:bytes):
     header_info = {'bb':NetworkRelayData, 'db':InfraredSensorData, 'dd':AQISensorData, 'df':LuxSensorData}
-    start_code_byte, body = bs[:1], bs[1:-1]
+    start_code_byte, body = bs[:1], bs[1:]
     start_code = str(binascii.b2a_hex(start_code_byte))[2:-1]
     data = header_info[start_code].parse(body)
     return data[0]
@@ -39,7 +39,7 @@ class NetworkRelayData(Parsable, Marshallable):
 
 class InfraredSensorData(Parsable, Marshallable):
     fields = '''
-        H:address, B:detectValue, B:setValue, B:delay, B:status
+        H:address, B:detectValue, B:setValue, B:delay, B:status, B:endCode
     '''
 
     class MarshalSchema(Schema):
@@ -63,7 +63,7 @@ class AQISensorData(Parsable, Marshallable):
         H:address, B:temperatureInteger, B:temperatureDecimal,
         B:humidityInteger, B:humidityDecimal,  B:pmInteger, B:pmDecimal,
         B:co2Integer, B:co2Decimal, B:tvocInteger, B:tvocDecimal,
-        B:vocInteger, B:vocDecimal
+        B:vocInteger, B:vocDecimal, B:endCode
     '''
     
     temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal')
@@ -91,7 +91,7 @@ class AQISensorData(Parsable, Marshallable):
 
 class LuxSensorData(Parsable, Marshallable):
     fields = '''
-        H:address, B:lux
+        H:address, B:lux, B:endCode
     '''
     '''
     @property
