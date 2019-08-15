@@ -257,7 +257,7 @@
         },
         "mantunsci-auth": {
             "git": "https://bitbucket.org/huangloong/mantunsci-auth.git",
-            "ref": "61fd36b88848940448e0b7482f5c236f92bd29be"
+            "ref": "a2173ed1e39c234f08bfae2b35891699a91e6858"
         },
         "markupsafe": {
             "hashes": [
