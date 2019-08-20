@@ -159,7 +159,7 @@ def circuit_current(self):
             latest_record = LatestCircuitRecord(circuit_id=id, circuit_record_id=last_record.id)
             db.session.add(latest_record)
         db.session.commit()
-            
+         
     
 @celery.task(bind=True)
 def circuit_alarm(self, start_time, end_time):

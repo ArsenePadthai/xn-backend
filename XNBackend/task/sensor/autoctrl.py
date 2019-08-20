@@ -27,7 +27,7 @@ def sensor_light(sensor_name):
             for switch in Switches.query.filter_by(model[sensor_name][1] = sensor.id).all():
                 flag = SwitchFlag.query.filter_by(switch_id = switch.id).first
                 if flag.manual == 0 and flag.touch != 1:
-                    network_relay_control.apply_async(args = [switch.device_index_code, switch.channel, 0], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
+                    network_relay_control.apply_async(args = [switch.device_index_code, switch.channel, False], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
                     flag.touch = 1
                     flag.latest_status = 0
     db.session.commit()

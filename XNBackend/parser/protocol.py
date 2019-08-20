@@ -11,7 +11,7 @@ L = logging.getLogger(__name__)
 
 
 def data_parse(bs:bytes):
-    header_info = {'bb':NetworkRelayData, 'db':InfraredSensorData, 'dd':AQISensorData, 'df':LuxSensorData}
+    header_info = {'22':NetworkRelayData, 'db':InfraredSensorData, 'dd':AQISensorData, 'df':LuxSensorData}
     start_code_byte, body = bs[:1], bs[1:]
     start_code = str(binascii.b2a_hex(start_code_byte))[2:-1]
     data = header_info[start_code].parse(body)
@@ -27,7 +27,7 @@ class AddressParseMixin:
 
 class NetworkRelayData(Parsable, Marshallable):
     fields = '''
-        H:id, B:channel, B:status, B:loadDetect
+        B:id, B:code, L:status, B:endCode
     '''
 
     class MarshalSchema(Schema):
