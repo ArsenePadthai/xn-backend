@@ -17,10 +17,10 @@ param = {
 
 localtime = time.localtime(time.time())
 all_body = [
-    {'method':'GET_BOX_MON_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0]},
-    {'method':'GET_BOX_DAY_POWER', 'projectCode':'', 'mac':'', 'year':localtime[0], 'month':localtime[1]},
-    {'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'', 'mac':''},
-    {'method':'GET_BOX_ALARM', 'projectCode':'', 'mac':'', 'start':'', 'end':''}
+    {'method':'GET_BOX_MON_POWER', 'projectCode':'P00000000001', 'mac':'', 'year':localtime[0], 'month':localtime[1]},
+    {'method':'GET_BOX_DAY_POWER', 'projectCode':'P00000000001', 'mac':'', 'year':localtime[0], 'month':localtime[1], 'day':localtime[2]},
+    {'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'P00000000001', 'mac':''},
+    {'method':'GET_BOX_ALARM', 'projectCode':'P00000000001', 'mac':'', 'start':'', 'end':''}
 ]
 
 s = None
@@ -52,14 +52,21 @@ def data_generator(n):
 @celery.task(bind=True)
 def all_boxes(self):
     record = []
-    body = {'method':'GET_BOXES', 'projectCode':''}
+    body = {'method':'GET_BOXES', 'projectCode':'P00000000001'}
     try:
-        recv_data = data_requests(body)['data']
+        data = data_requests(body)['data']
     except Exception:
         self.retry(countdown=3.0)
     for i in range(len(data)):
-        box = CircuitBreakers(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'])
-        record.append(box)
+        breaker = CircuitBreakers.query.filter_by(mac=data[i]['mac']).first()
+        if breaker is None:
+            box = CircuitBreakers(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'], room=data[i]['room'], unit=data[i]['unit'])
+            record.append(box)
+        else:
+            breaker.name = data[i]['name']
+            breaker.phone = data[i]['phone']
+            breaker.room = data[i]['room']
+            breaker.unit = data[i]['unit']
     db.session.bulk_save_objects(record)
     db.session.commit()    
 
@@ -73,7 +80,7 @@ def power_month(self):
         except KeyError:
             self.retry(countdown=3.0)
         for i in range(len(data)):
-            monthly_record = EnergyConsumeMonthly(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
+            monthly_record = EnegyConsumeMonthly(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
             record.append(monthly_record)
     db.session.bulk_save_objects(record)
     db.session.commit()
@@ -137,11 +144,15 @@ column_mappings = {
 @celery.task(bind=True)
 def circuit_current(self):
     for recv_data,id in data_generator(2):
+        L.info(recv_data)
+    return ''
+    for recv_data,id in data_generator(2):
         record = []
         try:
             data = recv_data['data']
         except KeyError:
-            self.retry(countdown=3.0)
+            continue 
+            #self.retry(countdown=3.0)
         for i in range(len(data)):
             data_args = {
                 k: data[i].get(v) for k,v in column_mappings.items()
@@ -151,7 +162,7 @@ def circuit_current(self):
         db.session.bulk_save_objects(record)
         db.session.commit()
 
-        last_record = CircuitRecord.query.order_by(CircuitRecord.id.desc()).first()
+        last_record = CircuitRecords.query.order_by(CircuitRecords.id.desc()).first()
         try:
             latest_record = LatestCircuitRecord.query.filter_by(circuit_id=id).first()
             latest_record.circuit_record_id = last_record.id
@@ -170,7 +181,8 @@ def circuit_alarm(self, start_time, end_time):
         try:
             data = recv_data['data']
         except KeyError:
-            self.retry(countdown=3.0)
+            continue 
+            #self.retry(countdown=3.0)
         for i in range(len(data)):
             alarm_record = CircuitAlarms(id= data[i]['auto_id'], circuit_breaker_id=id, addr=data[i]['addr'], node=data[i]['node'], alarm_or_type=data[i]['type'], info=data[i]['info'], type_number=data[i]['typeNumber'])
             try:
@@ -189,9 +201,4 @@ def circuit_alarm(self, start_time, end_time):
         db.session.commit()
     
 
-@celery.task()
-def get_token_test():
-    data = {'method':'GET_PROJECTS'}
-    message = data_requests(data)
-    return message
 
