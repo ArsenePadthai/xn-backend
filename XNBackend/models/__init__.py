@@ -1,6 +1,5 @@
 from . models import db, LuxSensors, UserLogins, Users, HeatMapSnapshots, \
-AppearRecords, LatestPosition, TrackingDevices, LatestCircuitRecord, \
-CircuitBreakers, LatestAlarm, EnegyConsumeMonthly, \
+AppearRecords, LatestPosition, TrackingDevices, EnegyConsumeMonthly, \
 EnergyConsumeDaily, IRSensors, AQISensors, LuxSensors, FireAlarmSensors,\
-Switches, Elevators
+Switches, Elevators, S3FC20
 

@@ -4,33 +4,38 @@ from flask_log_request_id import RequestID
 from XNBackend.task import celery
 from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
-from XNBackend.models import db, LuxSensors, HeatMapSnapshots, Users, \
-AppearRecords, LatestPosition, TrackingDevices, LatestCircuitRecord,\
-CircuitBreakers, LatestAlarm, EnegyConsumeMonthly, EnergyConsumeDaily,\
-IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators
+from XNBackend.models import db, HeatMapSnapshots, Users, UserLogins, AppearRecords, \
+    LatestPosition, TrackingDevices, EnegyConsumeMonthly, EnergyConsumeDaily,\
+IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators, S3FC20
 from XNBackend.extension import SaferProxyFix
-from flask_jwt_extended import JWTManager
 from XNBackend.api import api_bp
 import flask_restless
-from flask_jwt_extended import JWTManager, verify_jwt_in_request
+from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity
+from flask_jwt_extended.exceptions import NoAuthorizationError
 from XNBackend.cli import user_cli, systemd
-from flask import request
-
-
 
 
 def check_auth(*args, **kw):
     verify_jwt_in_request()
 
 
+def auth_lg_1(*args, **kw):
+    username = get_jwt_identity()
+    user_login = UserLogins.query.filter_by(username=username).first()
+    if user_login is None:
+        raise NoAuthorizationError(u"请先登陆")
+    elif user_login.level < 2:
+        raise NoAuthorizationError(u'您没有足够的权限进行此操作!')
+
+
 preprocessors = {
     "POST": [check_auth],
     "GET_SINGLE": [check_auth],
-    "GET_MANY": [check_auth],
+    "GET_MANY": [check_auth, auth_lg_1],
     "PATCH_SINGLE": [check_auth],
     "PATCH_MANY": [check_auth],
     "DELETE_SINGLE": [check_auth],
-    "DELETE_MANY": [check_auth]
+    "DELETE_MANY": [check_auth],
 }
 
 
@@ -73,9 +78,9 @@ def create_app(config_filename=None):
                                 preprocessors=preprocessors)
     restless_manager.create_api(LatestPosition, methods=["GET"])
     restless_manager.create_api(TrackingDevices, methods=["GET"])
-    restless_manager.create_api(LatestCircuitRecord, methods=["GET"])
-    restless_manager.create_api(CircuitBreakers, methods=["GET"])
-    restless_manager.create_api(LatestAlarm, methods=["GET"])
+    # restless_manager.create_api(LatestCircuitRecord, methods=["GET"])
+    # restless_manager.create_api(CircuitBreakers, methods=["GET"])
+    # restless_manager.create_api(LatestAlarm, methods=["GET"])
     restless_manager.create_api(EnegyConsumeMonthly, methods=["GET"])
     restless_manager.create_api(EnergyConsumeDaily, methods=["GET"])
     restless_manager.create_api(IRSensors, methods=["GET"])
@@ -84,5 +89,6 @@ def create_app(config_filename=None):
     restless_manager.create_api(FireAlarmSensors, methods=["GET"])
     restless_manager.create_api(Switches, methods=["GET"])
     restless_manager.create_api(Elevators, methods=["GET"])
+    restless_manager.create_api(S3FC20, methods=["GET"])
 
     return app
