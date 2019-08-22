@@ -355,9 +355,6 @@ class AQISensors(db.Model, TimeStampMixin):
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
-    # 链接开关的id
-    switch_id = db.Column(Integer, ForeignKey("switches.id",
-                                              ondelete="SET NULL"))
 
 
 class AQIEventCount(db.Model):
@@ -470,14 +467,6 @@ class Switches(db.Model, TimeStampMixin):
             return u'light'
         elif self.control_type == 2:
             return u'fan'
-
-
-class SwitchFlag(db.Model):
-    id = db.Column(Integer, primary_key=True)
-    switch_id = db.Column(Integer, ForeignKey(Switches.id, ondelete="CASCADE"))
-    latest_status = db.Column(BOOLEAN)
-    manual = db.Column(BOOLEAN)
-    touch = db.Column(BOOLEAN)
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):
