@@ -2,7 +2,8 @@ import requests
 import time
 from mantunsci_auth.auth import MantunsciAuthInMemory
 from XNBackend.task import celery, logger
-from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly, CircuitRecords, CircuitBreakers, LatestCircuitRecord, CircuitAlarms, LatestAlarm
+from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly
+    # CircuitRecords, CircuitBreakers, LatestCircuitRecord, CircuitAlarms, LatestAlarm
 
 L = logger.getChild(__name__)
 

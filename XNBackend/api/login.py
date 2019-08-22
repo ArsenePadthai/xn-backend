@@ -32,6 +32,7 @@ def login():
 def get_user():
     username = get_jwt_identity()
     this_user = UserLogins.query.filter_by(username=username).first()
+    level = this_user.level
     if this_user is None:
         resp = make_response(jsonify({"code":404, "msg":"User not exists"}))
     else:
@@ -54,7 +55,7 @@ def get_user():
                 "nation": this_user.nation,
                 "photo_url": this_user.photo_url,
                 "username": username,
-                "level": this_user.level
+                "level": level
             }
         }))
     return resp

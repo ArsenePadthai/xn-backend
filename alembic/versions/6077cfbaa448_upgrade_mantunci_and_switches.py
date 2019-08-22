@@ -147,7 +147,7 @@ def upgrade():
     op.drop_table('circuit_records')
     op.drop_column('energy_consume_daily', 'circuit_breaker')
     op.drop_column('energy_consume_daily', 'addr')
-    op.drop_column('energy_consume_monthly', 'circuit_breaker')
+    # op.drop_column('energy_consume_monthly', 'circuit_breaker')
     op.drop_constraint('energy_consume_monthly_ibfk_1', 'energy_consume_monthly', type_='foreignkey')
     # op.drop_table('circuit_breakers')
     op.drop_table('ir_count')
