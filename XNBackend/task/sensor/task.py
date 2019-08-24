@@ -1,8 +1,9 @@
 import socket
 import pickle
-from struct import pack
+from threading import Thread
+from struct import pack 
 from XNBackend.task import celery, logger
-from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchStatus
+from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchStatus, AutoControllers 
 from XNBackend.parser.protocol import data_parse
 from celery.signals import celeryd_init
 
@@ -15,20 +16,10 @@ client = None
 def tcp_client(host, port):
     global client 
     client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    client.settimeout(5)
+    client.settimeout(500)
     client.connect((host, port))   
     L.info('Connected to %s: %s', host, port)
     
-
-@celeryd_init.connect 
-def configure_workers(sender=None, **kwargs):
-    global client
-    try:
-        addr = sender.split('@')[1].split(':')
-        tcp_client(addr[0], int(addr[1]))
-    except Exception:
-        client = None
-
 
 def send_to_server(data, host, port):
     if client == None:
@@ -59,6 +50,25 @@ def data_generate(model):
             yield data, sensor
 
 
+def client_recv():
+    while True:
+        data = client.recv(1024)
+        L.info(data)
+
+
+@celeryd_init.connect 
+def configure_workers(sender=None, **kwargs):
+    global client 
+    try:
+        addr = sender.split('@')[1].split(':')
+        tcp_client(addr[0], int(addr[1]))
+        thread = Thread(target = client_recv)
+        thread.daemon=True
+        thread.start()
+    except Exception:
+        client = None
+
+
 @celery.task(bind=True, serializer='pickle')
 def network_relay_control(self, id, channel, is_open, sensor):
     code = '12' if is_open else '11'
@@ -66,7 +76,7 @@ def network_relay_control(self, id, channel, is_open, sensor):
 
     L.info("Control switch, send '%s' to id: %d", data, id)
     try:
-        recv_data = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
+        recv_data = send_to_server(data, sensor.switch_panel.tcp_config.ip, sensor.switch_panel.tcp_config.port)
         L.info('Received data from Switch at id of %s: %s', recv_data.id, recv_data)
     except Exception:
         celery.control.pool_restart(destination=[self.request.hostname])
@@ -107,7 +117,10 @@ def sensor_query(self, sensor_name, query_data, sensor):
 
     L.info("Query the status of %s, send '%s' to the server", sensor_name, query_data)
     try:
-        data = send_to_server(query_data, sensor.tcp_config.ip, sensor.tcp_config.port)
+        if sensor_name == 'Switch':
+            data = send_to_server(query_data, sensor.switch_panel.tcp_config.ip, sensor.switch_panel.tcp_config.port)
+        else:
+            data = send_to_server(query_data, sensor.tcp_config.ip, sensor.tcp_config.port)
     except Exception:
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
@@ -139,3 +152,6 @@ def tasks_route(sensor_name: str, id=None, channel=None, is_open=True):
     L.info('data stored')
     return ''
     
+
+@celery.task()
+def 

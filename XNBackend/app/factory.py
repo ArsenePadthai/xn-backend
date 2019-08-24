@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_compress import Compress
 from flask_log_request_id import RequestID
-from XNBackend.task import celery
+from XNBackend.task import celery 
 from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
 from XNBackend.models import db, HeatMapSnapshots, Users, UserLogins, AppearRecords, \
@@ -12,7 +12,7 @@ from XNBackend.api import api_bp
 import flask_restless
 from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity
 from flask_jwt_extended.exceptions import NoAuthorizationError
-from XNBackend.cli import user_cli, systemd
+from XNBackend.cli import user_cli, systemd 
 
 
 def check_auth(*args, **kw):
@@ -69,6 +69,7 @@ def create_app(config_filename=None):
     JWTManager(app)
     app.cli.add_command(user_cli)
     app.cli.add_command(systemd)
+
 
     # flask_restless part
     restless_manager.create_api(LuxSensors, methods=["GET"])

@@ -437,7 +437,9 @@ class SwitchPanel(db.Model, TimeStampMixin):
     __tablename__ = 'switch_panel'
     id = db.Column(Integer, primary_key=True)
     desc = db.Column(Unicode(length=LONG_LEN))
-    ip = db.Column(Unicode(length=SHORT_LEN))
+    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+                                                  ondelete='set null'))
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
 
 class Switches(db.Model, TimeStampMixin):
@@ -460,6 +462,7 @@ class Switches(db.Model, TimeStampMixin):
     locator = relationship('Locators')
     # when level is 0 means main light, when level is 1 means aux light
     level = db.Column(SmallInteger)
+    switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id])
 
     @property
     def control_type_readable(self):
@@ -509,3 +512,6 @@ class AutoControllers(db.Model, TimeStampMixin):
                                       ondelete='SET NULL'))
     locator = relationship('Locators')
     ir_count = db.Column(SmallInteger)
+    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+                                                  ondelete='set null'))
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
