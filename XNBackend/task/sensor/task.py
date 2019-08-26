@@ -53,7 +53,6 @@ def data_generate(model):
 def client_recv():
     while True:
         data = client.recv(1024)
-        L.info(data)
 
 
 @celeryd_init.connect 
@@ -153,5 +152,3 @@ def tasks_route(sensor_name: str, id=None, channel=None, is_open=True):
     return ''
     
 
-@celery.task()
-def 

@@ -80,6 +80,61 @@ class AQISensorData(Parsable, Marshallable):
         HumidityInteger = fields.Integer(attribute='humidityInteger')
         HumidityDecimal = fields.Integer(attribute='humidityDecimal')
         PmInteger = fields.Integer(attribute='pmInteger')
+class NetworkRelayData(Parsable, Marshallable):
+    fields = '''
+        B:id, B:code, L:status, B:endCode
+    '''
+
+    class MarshalSchema(Schema):
+        ID = fields.Integer(attribute='id')
+        Channel = fields.Integer(attribute='channel')
+        Status = fields.Integer(attribute='status')
+        LoadDetect = fields.Integer(attribute='loadDetect')
+
+
+class InfraredSensorData(Parsable, Marshallable):
+    fields = '''
+        H:address, B:detectValue, B:setValue, B:delay, B:status, B:endCode
+    '''
+
+    class MarshalSchema(Schema):
+        Address = fields.String(attribute='address')
+        Delay = fields.Integer(attribute='delay')
+        Status = fields.Integer(attribute='status')
+
+
+class FloatAssembler:
+    def __init__(self, integer, decimal):
+        self.integer = integer
+        self.decimal = decimal
+
+    def __get__(self, instance, owner):
+        i = getattr(instance, self.integer)
+        d = getattr(instance, self.decimal)
+        return float('%d.%d' % (i, d))
+
+class AQISensorData(Parsable, Marshallable):
+    fields = '''
+        H:address, B:temperatureInteger, B:temperatureDecimal,
+        B:humidityInteger, B:humidityDecimal,  B:pmInteger, B:pmDecimal,
+        B:co2Integer, B:co2Decimal, B:tvocInteger, B:tvocDecimal,
+        B:vocInteger, B:vocDecimal, B:endCode
+    '''
+    
+    temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal')
+    humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal')
+    pm = FloatAssembler(integer='pmInteger', decimal='pmDecimal')
+    co2 = FloatAssembler(integer='co2Integer', decimal='co2Decimal')
+    tvoc = FloatAssembler(integer='tvocInteger', decimal='tvocDecimal')
+    voc = FloatAssembler(integer='vocInteger', decimal='vocDecimal')
+
+    class MarshalSchema(Schema):
+        Address = fields.String(attribute='address')
+        TemperatureInteger = fields.Integer(attribute='temperatureInteger')
+        TemperatureDecimal = fields.Integer(attribute='temperatureDecimal')
+        HumidityInteger = fields.Integer(attribute='humidityInteger')
+        HumidityDecimal = fields.Integer(attribute='humidityDecimal')
+        PmInteger = fields.Integer(attribute='pmInteger')
         PmDecimal = fields.Integer(attribute='pmDecimal')
         Co2Integer = fields.Integer(attribute='co2Integer')
         Co2Decimal = fields.Integer(attribute='co2Decimal')

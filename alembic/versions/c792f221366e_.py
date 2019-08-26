@@ -435,7 +435,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('switch_id', sa.Integer(), nullable=True),
     sa.Column('value', sa.SmallInteger(), nullable=True),
-    sa.ForeignKeyConstraint(['switch_id'], ['switches.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['switch_id'], ['switches.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id')
     )
 

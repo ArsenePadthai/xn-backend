@@ -2,7 +2,7 @@
 from .base import db
 
 from sqlalchemy import ForeignKey, Unicode, BOOLEAN, TIMESTAMP, String, \
-    SmallInteger, Integer, Float
+    SmallInteger, Integer, Float, Time
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from flask_bcrypt import generate_password_hash, check_password_hash
@@ -424,18 +424,10 @@ class FireAlarmSensors(db.Model, TimeStampMixin):
     locator_body = relationship('Locators')
 
 
-class SwitchStatus(db.Model, TimeStampMixin):
-    __tablename__ = 'switch_status'
-    id = db.Column(Integer, primary_key=True)
-    switch_id = db.Column(Integer, ForeignKey('switches.id',
-                                              ondelete='CASCADE'))
-    # 0 means off, 1 means on
-    value = db.Column(SmallInteger)
-
-
 class SwitchPanel(db.Model, TimeStampMixin):
     __tablename__ = 'switch_panel'
     id = db.Column(Integer, primary_key=True)
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     desc = db.Column(Unicode(length=LONG_LEN))
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
@@ -445,24 +437,49 @@ class SwitchPanel(db.Model, TimeStampMixin):
 class Switches(db.Model, TimeStampMixin):
     __tablename__ = 'switches'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     channel = db.Column(Integer)
-    latest_record_id = db.Column(Integer,
-                                 ForeignKey('switch_status.id',
-                                            ondelete='SET NULL'))
     switch_panel_id = db.Column(Integer,
                                 ForeignKey('switch_panel.id',
                                            ondelete='SET NULL'))
-    latest_record = relationship('SwitchStatus',
-                                 foreign_keys=[latest_record_id])
-    control_type = db.Column(SmallInteger)
+    status = db.Column(SmallInteger)
+    # when level is 0 means main light, when level is 1 means aux light
+    level = db.Column(SmallInteger)
     locator_id = db.Column(Unicode(length=MEDIUM_LEN),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
     locator = relationship('Locators')
-    # when level is 0 means main light, when level is 1 means aux light
-    level = db.Column(SmallInteger)
     switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id])
+
+
+class RelayStatus(db.Model, TimeStampMixin):
+    __tablename__ = 'relay_status'
+    id = db.Column(Integer, primary_key=True)
+    relay_id = db.Column(Integer, ForeignKey('relay.id',
+                                              ondelete='CASCADE'))
+    # 0 means off, 1 means on
+    value = db.Column(SmallInteger)
+
+
+class Relay(db.Model, TimeStampMixin):
+    __tablename__ = 'relay'
+    id = db.Column(Integer, primary_key=True)
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    channel = db.Column(Integer)
+    latest_record_id = db.Column(Integer,
+                                 ForeignKey('relay_status.id',
+                                            ondelete='SET NULL'))
+    control_type = db.Column(SmallInteger)
+    switch_id = db.Column(Integer,
+                                ForeignKey('switches.id',
+                                           ondelete='SET NULL'))
+    switch = relationship('Switches', foreign_keys=[switch_id])
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+                           ForeignKey(Locators.internal_code,
+                                      ondelete='SET NULL'))
+    locator = relationship('Locators')
+    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
+                                                  ondelete='set null'))
+    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
 
     @property
     def control_type_readable(self):
@@ -507,11 +524,28 @@ class AutoControllers(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     # 0 means manual 1 means auto
     if_auto = db.Column(SmallInteger)
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
-                           ForeignKey(Locators.internal_code,
-                                      ondelete='SET NULL'))
-    locator = relationship('Locators')
     ir_count = db.Column(SmallInteger)
-    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
-                                                  ondelete='set null'))
-    tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
+    start_time = db.Column(Time)
+    end_time = db.Column(Time)
+    switch_panel_id = db.Column(Integer,
+                                ForeignKey('switch_panel.id',
+                                           ondelete='SET NULL'))
+    switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id])
+    ir_sensor_id = db.Column(Integer,
+                                ForeignKey('ir_sensors.id',
+                                           ondelete='SET NULL'))
+    ir_sensor = relationship('IRSensors', foreign_keys=[ir_sensor_id])
+    lux_sensor_id = db.Column(Integer,
+                                ForeignKey('lux_sensors.id',
+                                           ondelete='SET NULL'))
+    lux_sensor = relationship('LuxSensors', foreign_keys=[lux_sensor_id])
+
+
+class AirConditioner(db.Model, TimeStampMixin):
+    __tablename__ = 'air_conditioner'
+    id = db.Column(Integer, primary_key=True)
+    auto_controller_id = db.Column(Integer,
+                                ForeignKey('auto_controllers.id',
+                                           ondelete='SET NULL'))
+    auto_controller = relationship('AutoControllers', foreign_keys=[auto_controller_id])
+
