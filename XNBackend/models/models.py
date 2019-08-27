@@ -427,7 +427,8 @@ class FireAlarmSensors(db.Model, TimeStampMixin):
 class SwitchPanel(db.Model, TimeStampMixin):
     __tablename__ = 'switch_panel'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    batch_no = db.Column(db.Integer)
+    addr_no = db.Column(db.Integer)
     desc = db.Column(Unicode(length=LONG_LEN))
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
