@@ -488,6 +488,8 @@ class Relay(db.Model, TimeStampMixin):
             return u'light'
         elif self.control_type == 2:
             return u'fan'
+        elif self.control_type == 3:
+            return u'is_auto'
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):

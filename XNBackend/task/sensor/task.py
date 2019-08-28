@@ -1,13 +1,14 @@
 import socket
 import pickle
+import time
 from threading import Thread
 from struct import pack, unpack 
 from XNBackend.task import celery, logger
-from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, RelayStatus, TcpConfig
+from XNBackend.models.models import db, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, RelayStatus, TcpConfig, AutoControllers 
 from XNBackend.parser.protocol import data_parse
 from celery.signals import celeryd_init
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker 
 
 
 L = logger.getChild(__name__)
@@ -26,6 +27,7 @@ def tcp_client(host, port):
     L.info('Connected to %s: %s', host, port)
     
 
+
 def send_to_server(data, host, port):
     if client == None:
         tcp_client(host, port)
@@ -35,6 +37,7 @@ def send_to_server(data, host, port):
     L.info('Received data: %s', message)
 
     return message
+
 
 
 def data_generate(model):
@@ -55,6 +58,47 @@ def data_generate(model):
             yield data, sensor
 
 
+
+def day_control(controller): 
+    for swicth in Switches.query.filter_by(switch_panel_id=controller.switch_panel_id, level=0).order_by():
+        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
+            panel_relay_control.apply_async(args = [int(relay.device_index_code), relay.channel, 0, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+
+
+
+def night_control(controller):
+    for swicth in Switches.query.filter_by(switch_panel_id=controller.switch_panel_id).order_by():
+        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
+            panel_relay_control.apply_async(args = [int(relay.device_index_code), relay.channel, 0, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+
+
+ 
+@celery.task(serializer='pickle')
+def ir_query(control, is_day=None):
+    data = bytes.fromhex('DA') + pack('>B', batch) + pack('>B', addr) + bytes.fromhex('86 86 86 EE')
+    sensor = IRSensors.query.filter_by(batch_no=control.ir_sensor.batch_no, addr_no=control.ir_sensor.addr_no)
+    msg = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
+    if msg.status and is_day is not None:
+        control.ir_count += 1
+    else:
+        control.ir_count = msg.status 
+
+    record = IRSensorStatus(sensor_id=control.ir_sensor_id, value=msg.detectValue, status=msg.status)
+    db.session.add(record)
+    db.session.flush()
+    sensor.latest_record_id = record.id
+    db.session.add(sensor)
+    db.session.add(control)
+    db.session.commit()
+
+    if control.ir_count > 1:
+        if is_day == 1:
+            day_control(control)
+        elif is_day == 0:
+            night_control(control)
+
+
+
 def network_relay_control(id, channel, is_open, sensor):
     code = '12' if is_open else '11'
     data = bytes.fromhex('55') + pack('>B', id) + bytes.fromhex(code + '00 00 00') + pack('>B', channel) + bytes.fromhex(hex(int(code, 16) + 85 + id + channel)[-2:])
@@ -63,13 +107,27 @@ def network_relay_control(id, channel, is_open, sensor):
     recv_data = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
     L.info('Received data from Switch at id of %s: %s', recv_data.id, recv_data)
 
+    if sensor.control_type == 1:
+        control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
+        control.if_auto = 0
+        control.ir_count = 0
+        db.session.add(control)
+    elif sensor.control_type == 3:
+        control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
+        if is_open:
+            ir_query.apply_async(args = [control], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
+        control.if_auto = is_open 
+        db.session.add(control)
+
     record = RelayStatus(relay_id = sensor.id, value = (recv_data.status & 1 << channel-1) != 0)
     db.session.add(record)
     db.session.flush()
+
     sensor.latest_record_id = record.id
     db.session.add(sensor)
     db.session.commit()
     L.info('Switch: control successfully')
+
 
 
 @celery.task(bind=True, serializer='pickle')
@@ -83,24 +141,27 @@ def panel_relay_control(self, id, channel, is_open, sensor):
     return ''
 
 
-def client_recv():
+
+def client_recv(ip, port):
     client.setblocking(1)
     while True:
-        data = client.recv(1024)
-        print(data)
+        try:
+            data = client.recv(1024)
+        except ConnectionResetError:
+            tcp_client(ip, port)
         startcode, batch, addr, status = unpack('>B', data[:1])[0], unpack('>B', data[1:2])[0], unpack('>B', data[2:3])[0], data[3:-1]
         panel = session.query(SwitchPanel).filter_by(batch_no = batch, addr_no = addr).first()
         for i in range(len(status)):
             value = unpack('>B', status[i:i+1])[0] & 0x11 
             switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
-            if switch == None:
+            if switch == None or switch.status == value:
                 continue
             for relay in session.query(Relay).filter_by(switch_id = switch.id).order_by():
-                is_open = 1 if value else 0 
-                panel_relay_control.apply_async(args = [int(relay.device_index_code), i+1, is_open, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+                panel_relay_control.apply_async(args = [int(relay.device_index_code), i+1, value, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
             switch.status = value 
             session.add(switch)
             session.commit()
+
 
 
 @celeryd_init.connect 
@@ -112,20 +173,22 @@ def configure_workers(sender=None, **kwargs):
         tcp = session.query(TcpConfig).filter_by(ip = addr[0], port = int(addr[1])).first()
         switch = session.query(SwitchPanel).filter_by(tcp_config_id = tcp.id).count()
         if switch != 0:
-            thread = Thread(target = client_recv)
+            thread = Thread(target = client_recv, args=(addr[0], int(addr[1]),))
             thread.daemon=True
             thread.start()
     except Exception:
         client = None
 
 
-@celery.task(bind=True)
+
+@celery.task(bind=True, serializer='pickle')
 def client_send(self, data):
     try:
         client.send(data)
     except Exception:
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
+
 
 
 @celery.task(bind=True, serializer='pickle')
@@ -137,15 +200,15 @@ def relay_panel_control(self, id, channel, is_open, sensor):
         celery.control.pool_restart(destination=[self.request.hostname])
         self.retry(countdown=3.0)
 
-    data = pack('>B', is_open)
+    data = '0'+str(is_open)
     for panel in Switches.query.filter_by(switch_panel_id = sensor.switch.switch_panel_id).order_by():
         if panel.channel < sensor.channel:
-            data_pre += pack('>B', panel.status)
+            data_pre += ('0'+str(panel.status))
         elif panel.channel > sensor.channel:
-            data += pack('>B', panel.status)
+            data += ('0'+str(panel.status))
 
-    all_data = (data_pre+data).ljust(4, pack('>B', 0))
-    data_bytes = bytes.fromhex('DA')+pack('>B', sensor.switch.switch_panel.batch_no)+pack('>B', sensor.switch.switch_panel.addr_no)+pack('>B', 2)+all_data+bytes.fromhex('EE')
+    all_data = (data_pre+data).ljust(8, '0')
+    data_bytes = bytes.fromhex('DA')+pack('>B', sensor.switch.switch_panel.batch_no)+pack('>B', sensor.switch.switch_panel.addr_no)+pack('>B', 2)+bytes.fromhex(all_data)+bytes.fromhex('EE')
     client_send.apply_async(args = [data_bytes], queue = panel.switch_panel.tcp_config.ip+':'+str(panel.switch_panel.tcp_config.port))
 
 
@@ -193,6 +256,7 @@ def sensor_query(self, sensor_name, query_data, sensor):
     db.session.add(sensor)
     db.session.commit()
     return '' 
+
 
 
 @celery.task()

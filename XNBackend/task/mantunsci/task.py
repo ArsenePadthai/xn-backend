@@ -2,8 +2,7 @@ import requests
 import time
 from mantunsci_auth.auth import MantunsciAuthInMemory
 from XNBackend.task import celery, logger
-from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly
-    # CircuitRecords, CircuitBreakers, LatestCircuitRecord, CircuitAlarms, LatestAlarm
+from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly, EnergyConsumeByHour, MantunciBox, S3FC20, S3FC20Records, BoxAlarms
 
 L = logger.getChild(__name__)
 
@@ -21,8 +20,9 @@ all_body = [
     {'method':'GET_BOX_MON_POWER', 'projectCode':'P00000000001', 'mac':'', 'year':localtime[0], 'month':localtime[1]},
     {'method':'GET_BOX_DAY_POWER', 'projectCode':'P00000000001', 'mac':'', 'year':localtime[0], 'month':localtime[1], 'day':localtime[2]},
     {'method':'GET_BOX_CHANNELS_REALTIME', 'projectCode':'P00000000001', 'mac':''},
-    {'method':'GET_BOX_ALARM', 'projectCode':'P00000000001', 'mac':'', 'start':'', 'end':''}
-]
+    {'method':'GET_BOX_ALARM', 'projectCode':'P00000000001', 'mac':'', 'start':'', 'end':''},
+    {'method':'GET_BOX_HOUR_POWER', 'projectCode':'P00000000001', 'mac':'', 'year':localtime[0], 'month':localtime[1], 'day':localtime[2], 'hour':localtime[3]}
+    ]
 
 s = None
 
@@ -44,7 +44,7 @@ def data_requests(body):
 
 def data_generator(n):
     global all_body
-    for circuit in CircuitBreakers.query.order_by():
+    for circuit in MantunciBox.query.order_by():
         all_body[n]['mac'] = circuit.mac
         data = data_requests(all_body[n])
         yield data, circuit.id
@@ -58,16 +58,15 @@ def all_boxes(self):
         data = data_requests(body)['data']
     except Exception:
         self.retry(countdown=3.0)
+        return ''
     for i in range(len(data)):
-        breaker = CircuitBreakers.query.filter_by(mac=data[i]['mac']).first()
+        breaker = MantunciBox.query.filter_by(mac=data[i]['mac']).first()
         if breaker is None:
-            box = CircuitBreakers(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'], room=data[i]['room'], unit=data[i]['unit'])
+            box = MantunciBox(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'])
             record.append(box)
         else:
             breaker.name = data[i]['name']
             breaker.phone = data[i]['phone']
-            breaker.room = data[i]['room']
-            breaker.unit = data[i]['unit']
     db.session.bulk_save_objects(record)
     db.session.commit()    
 
@@ -79,9 +78,11 @@ def power_month(self):
         try:
             data = recv_data['data']
         except KeyError:
-            self.retry(countdown=3.0)
+            #self.retry(countdown=3.0)
+            continue
         for i in range(len(data)):
-            monthly_record = EnegyConsumeMonthly(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
+            c20 = S3FC20.query.filter_by(addr=data[i]['addr'], box_id=id).first()
+            monthly_record = EnegyConsumeMonthly(box_id=id, s3_fc20_id=c20.id, electricity=data[i]['electricity'])
             record.append(monthly_record)
     db.session.bulk_save_objects(record)
     db.session.commit()
@@ -94,16 +95,34 @@ def power_day(self):
         try:
             data = recv_data['data']
         except KeyError:
-            self.retry(countdown=3.0)
+            #self.retry(countdown=3.0)
+            continue 
         for i in range(len(data)):
-            daily_record = EnergyConsumeDaily(circuit_breaker=id, addr=data[i]['addr'], electricity=data[i]['electricity'])
+            c20 = S3FC20.query.filter_by(addr=data[i]['addr'], box_id=id).first()
+            daily_record = EnergyConsumeDaily(box_id=id, s3_fc20_id=c20.id, electricity=data[i]['electricity'])
+            record.append(daily_record)
+    db.session.bulk_save_objects(record)
+    db.session.commit()
+
+
+@celery.task(bind=True)
+def power_hour(self):
+    record = []
+    for recv_data,id in data_generator(4):
+        try:
+            data = recv_data['data']
+        except KeyError:
+            #self.retry(countdown=3.0)
+            continue 
+        for i in range(len(data)):
+            c20 = S3FC20.query.filter_by(addr=data[i]['addr'], box_id=id).first()
+            daily_record = EnergyConsumeByHour(box_id=id, s3_fc20_id=c20.id, electricity=data[i]['electricity'])
             record.append(daily_record)
     db.session.bulk_save_objects(record)
     db.session.commit()
 
 
 column_mappings = {
-    'addr': 'addr', 
     'title': 'title', 
     'validity': 'validity', 
     'enable_netctr': 'enableNetCtrl',
@@ -145,61 +164,43 @@ column_mappings = {
 @celery.task(bind=True)
 def circuit_current(self):
     for recv_data,id in data_generator(2):
-        L.info(recv_data)
-    return ''
-    for recv_data,id in data_generator(2):
-        record = []
         try:
             data = recv_data['data']
         except KeyError:
-            continue 
             #self.retry(countdown=3.0)
+            continue 
         for i in range(len(data)):
             data_args = {
                 k: data[i].get(v) for k,v in column_mappings.items()
             }
-            circuit_record = CircuitRecords(circuit_breaker_id=id, **data_args)
-            record.append(circuit_record)
-        db.session.bulk_save_objects(record)
-        db.session.commit()
+            c20 = S3FC20.query.filter_by(addr=data[i]['addr'], box_id=id).first()
+            circuit_record = S3FC20Records(s3_fc20_id=c20.id, **data_args)
+            db.session.add(circuit_record)
+            db.session.flush()
+            c20.latest_record_id = circuit_record.id
+            db.session.add(c20)
+            db.session.commit()
 
-        last_record = CircuitRecords.query.order_by(CircuitRecords.id.desc()).first()
-        try:
-            latest_record = LatestCircuitRecord.query.filter_by(circuit_id=id).first()
-            latest_record.circuit_record_id = last_record.id
-        except Exception:
-            latest_record = LatestCircuitRecord(circuit_id=id, circuit_record_id=last_record.id)
-            db.session.add(latest_record)
-        db.session.commit()
-         
-    
+   
 @celery.task(bind=True)
 def circuit_alarm(self, start_time, end_time):
     global all_body
     all_body[3]['start'] = start_time
     all_body[3]['end'] = end_time
-    for recv_data,id in data_generator(3):
+    for recv_data,num in data_generator(3):
         try:
             data = recv_data['data']
         except KeyError:
-            continue 
             #self.retry(countdown=3.0)
+            continue 
         for i in range(len(data)):
-            alarm_record = CircuitAlarms(id= data[i]['auto_id'], circuit_breaker_id=id, addr=data[i]['addr'], node=data[i]['node'], alarm_or_type=data[i]['type'], info=data[i]['info'], type_number=data[i]['typeNumber'])
-            try:
-                db.session.add(alarm_record)
-                db.session.commit()
-            except Exception:
-                continue
+            alarm_record = BoxAlarms(id= data[i]['auto_id'], box_id=num, addr=data[i]['addr'], node=data[i]['node'], alarm_or_type=data[i]['type'], info=data[i]['info'], type_number=data[i]['typeNumber'])
+            db.session.add(alarm_record)
+            db.session.flush()
+            box = MantunciBox.query.filter_by(id = num).first()
+            box.latest_alarm_id = alarm_record.id
+            db.session.add(box)
+            db.session.commit()
 
-        last_alarm = CircuitAlarms.query.order_by(CircuitAlarms.id.desc()).first()
-        try:
-            latest_alarm = LatestAlarm.query.filter_by(circuit_id=id).first()
-            latest_alarm.circuit_record_id = last_alarm.id
-        except Exception:
-            latest_alarm = LatestCircuitRecord(circuit_id=id, circuit_alarm_id=last_alarm.id)
-            db.session.add(latest_alarm)
-        db.session.commit()
-    
 
 

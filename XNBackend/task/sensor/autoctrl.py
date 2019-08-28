@@ -1,78 +1,45 @@
 from XNBackend.task import celery
-from .task import data_generate, network_relay_control, sensor_query
-from XNBackend.models.models import db, IREventCount, AQIEventCount, LuxEventCount, SwitchFlag, Switches
+from .task import ir_query 
+from XNBackend.models.models import db, AutoControllers 
 
 
 default_lux_value = 10000
 default_aqi_value = 10000
 
-def sensor_light(sensor_name):  
-    model = {
-        'IR':[IREventCount, ir_id],
-        'Lux':[LuxEventCount, lux_id],
-        'AQI':[AQIEventCount, aqi_id]
-    }
 
-    for data, sensor in data_generate(sensor_name):
-        sensor_query.apply_async(args = [sensor_name, data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
-        event = model[sensor_name][0].query.filter_by(model[sensor_name][1] = sensor.id).first()
-        branch = lambda name:sensor.latest_record.status==0 if name=='IR' else sensor.latest_record.value>=default_lux_value if name=='Lux' else sensor.latest_record.pm25>=default_aqi_value 
-        if branch(sensor_name):
-            event.count += 1
-        else:
-            event.count = 0
-        db.session.commit()
-
-        if event.count > 1:
-            for switch in Switches.query.filter_by(model[sensor_name][1] = sensor.id).all():
-                flag = SwitchFlag.query.filter_by(switch_id = switch.id).first
-                if flag.manual == 0 and flag.touch != 1:
-                    network_relay_control.apply_async(args = [switch.device_index_code, switch.channel, False], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
-                    flag.touch = 1
-                    flag.latest_status = 0
-    db.session.commit()
+def day_control(controller): 
+    for swicth in Switches.query.filter_by(switch_panel_id=controller.switch_panel_id, level=0).order_by():
+        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
+            panel_relay_control.apply_async(args = [int(relay.device_index_code), relay.channel, 0, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
 
 
-def switch_light():
-    for data, sensor in data_generate('Switch'):
-        flag = SwitchFlag.query.filter_by(switch_id = sensor.id).first()
-        if flag.touch == 0:
-            sensor_query.apply_async(args = ['Switch', data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
-            flag.manual = 1 if flag.latest_status ==  0 and sensor.latest_record.value == 1 else 0
-            flag.latest_status = sensor.latest_record.value 
-    db.session.commit()
+
+def night_control(controller):
+    for swicth in Switches.query.filter_by(switch_panel_id=controller.switch_panel_id).order_by():
+        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
+            panel_relay_control.apply_async(args = [int(relay.device_index_code), relay.channel, 0, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+
 
  
 @celery.task()
-def auto_control(sensor_name):
-    switch_light()
-    sensor_light(sensor_name)
+def auto_control():
+    is_day = 1 if time.strftime('%H%M%S')>='070000' and time.strftime('%H%M%S')<'220000' else 0
+    for control in AutoControllers.query.filter_by(if_auto=1).order_by():
+        ir_query.apply_async(args = [control, is_day], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
+        if control.ir_count > 1
+            control.if_auto = 0
+        db.session.add(control)
+        db.session.commit()
+
 
 
 @celery.task()
 def init_control():
-    sensor_name = ['IR', 'Lux', 'AQI']
-    model = {
-        'IR':[IREventCount, ir_id, status],
-        'Lux':[LuxEventCount, lux_id, value],
-        'AQI':[AQIEventCount, aqi_id, pm25],
-    }
+    for control in AutoControllers.query.filter_by(if_auto=1).order_by():
+        ir_query.apply_async(args = [control], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
+        control.if_auto = 1
+        db.session.add(control)
+        db.session.commit()
 
-    for data, sensor in data_generate('Switch'):
-        flag = SwitchFlag.query.filter_by(switch_id = sensor.id).first()
-        flag.latest_status = sensor.latest_record.value
-        flag.manual = 0
-        flag.touch = 0
-    db.session.commit()
 
-    for i in range(3):
-        for data, sensor in data_generate(sensor_name[i]):
-            sensor_query.apply_async(args = [sensor_name[i], data, sensor], queue = sensor.ip_config.ip+':'+str(sensor.ip_config.port))
-            event = model[sensor_name[i]][0].query.filter_by(model[sensor_name[i]][1] = sensor.id).first()
-            if sensor.latest_record.model[sensor_name[i]][2] == 0 or sensor.latest_record.model[sensor_name[i]][2] >= default_value:
-                event.count = 1
-            else:
-                event.count = 0
-    db.session.commit()
-    
 
