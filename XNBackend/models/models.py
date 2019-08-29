@@ -430,9 +430,15 @@ class SwitchPanel(db.Model, TimeStampMixin):
     batch_no = db.Column(db.Integer)
     addr_no = db.Column(db.Integer)
     desc = db.Column(Unicode(length=LONG_LEN))
+    # when panel_type is 0 means four control, when panel_type is 1 means double control 
+    panel_type = db.Column(SmallInteger)
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+                           ForeignKey(Locators.internal_code,
+                                      ondelete='SET NULL'))
+    locator = relationship('Locators')
 
 
 class Switches(db.Model, TimeStampMixin):
@@ -443,13 +449,25 @@ class Switches(db.Model, TimeStampMixin):
                                 ForeignKey('switch_panel.id',
                                            ondelete='SET NULL'))
     status = db.Column(SmallInteger)
-    # when level is 0 means main light, when level is 1 means aux light
-    level = db.Column(SmallInteger)
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
-                           ForeignKey(Locators.internal_code,
-                                      ondelete='SET NULL'))
-    locator = relationship('Locators')
     switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id])
+
+    @property
+    def four_control_type_readable(self):
+        if self.channel == 1:
+            return u'main light'
+        elif self.channel == 2:
+            return u'aux light'
+        elif self.channel == 3:
+            return u'acs'
+        elif self.channel == 4:
+            return u'auto'
+
+    @property
+    def double_control_type_readable(self):
+        if self.channel == 1:
+            return u'main light'
+        elif self.channel == 2:
+            return u'auto'
 
 
 class RelayStatus(db.Model, TimeStampMixin):
@@ -469,7 +487,6 @@ class Relay(db.Model, TimeStampMixin):
     latest_record_id = db.Column(Integer,
                                  ForeignKey('relay_status.id',
                                             ondelete='SET NULL'))
-    control_type = db.Column(SmallInteger)
     switch_id = db.Column(Integer,
                                 ForeignKey('switches.id',
                                            ondelete='SET NULL'))
@@ -481,15 +498,6 @@ class Relay(db.Model, TimeStampMixin):
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-
-    @property
-    def control_type_readable(self):
-        if self.control_type == 1:
-            return u'light'
-        elif self.control_type == 2:
-            return u'fan'
-        elif self.control_type == 3:
-            return u'is_auto'
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):
