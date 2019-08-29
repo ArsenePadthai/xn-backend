@@ -67,13 +67,15 @@ def day_control(control):
 
 
 def night_control(control):
-    panel = SwitchPanel.query.filter_by(id=control.switch_panel_id).first()
-    if panel.panel_type == 0:
-        for swicth in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, or_(channel=1, chanel=2)).order_by():
-    else:
-        for swicth in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
-        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-            network_relay_control.apply_async(args = [int(relay.device_index_code), relay.channel, 0, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+    # panel = SwitchPanel.query.filter_by(id=control.switch_panel_id).first()
+    # if panel.panel_type == 0:
+    #     for swicth in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, or_(channel=1, chanel=2)).order_by():
+    # else:
+    #     for swicth in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
+    #     for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
+    #         network_relay_control.apply_async(args = [int(relay.device_index_code), relay.channel, 0, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+    pass
+
 
 
  

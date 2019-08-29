@@ -6,7 +6,7 @@ from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
 from XNBackend.models import db, HeatMapSnapshots, Users, UserLogins, AppearRecords, \
     LatestPosition, TrackingDevices, EnegyConsumeMonthly, EnergyConsumeDaily,\
-IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators, S3FC20
+IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators, S3FC20, Relay
 from XNBackend.extension import SaferProxyFix
 from XNBackend.api import api_bp
 import flask_restless
@@ -91,5 +91,6 @@ def create_app(config_filename=None):
     restless_manager.create_api(Switches, methods=["GET"])
     restless_manager.create_api(Elevators, methods=["GET"])
     restless_manager.create_api(S3FC20, methods=["GET"])
+    restless_manager.create_api(Relay, methods=["GET"])
 
     return app

@@ -498,6 +498,7 @@ class Relay(db.Model, TimeStampMixin):
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
+    latest_record = relationship('RelayStatus', foreign_keys=[latest_record_id])
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):

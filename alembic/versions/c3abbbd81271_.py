@@ -51,7 +51,7 @@ def upgrade():
     sa.ForeignKeyConstraint(['tcp_config_id'], ['tcp_config.id'], ondelete='set null'),
     sa.PrimaryKeyConstraint('id')
     )
-    sa.ForeignKeyConstraint(['relay_id'], ['relay.id'], ondelete='CASCADE'),
+    # sa.ForeignKeyConstraint(['relay_id'], ['relay.id'], ondelete='CASCADE'),
     op.create_index(op.f('ix_relay_device_index_code'), 'relay', ['device_index_code'], unique=False)
     op.drop_constraint('switches_ibfk_3', 'switches', type_='foreignkey')
     op.drop_constraint('switches_ibfk_4', 'switches', type_='foreignkey')
