@@ -458,7 +458,7 @@ class Switches(db.Model, TimeStampMixin):
         elif self.channel == 2:
             return u'aux light'
         elif self.channel == 3:
-            return u'acs'
+            return u'fan'
         elif self.channel == 4:
             return u'auto'
 

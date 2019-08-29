@@ -9,5 +9,6 @@ from XNBackend.task.mantunsci.task import *
 def test():
     #tasks_route.delay('SwitchControl', 1, 1, 1)
     #tasks_route.delay('Switch')
-    circuit_current.delay()
+    #circuit_current.delay()
+    test1()
     return jsonify({"hello": "world"})
