@@ -18,7 +18,7 @@ def auto_control():
 @celery.task()
 def init_control():
     for control in AutoControllers.query.order_by():
-        ir_query.apply_async(args = [control], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
+        ir_query.apply_async(args = [control, False], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
         control.if_auto = 1
         #db.session.add(control)
         db.session.commit()
