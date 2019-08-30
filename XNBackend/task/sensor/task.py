@@ -267,13 +267,13 @@ def sensor_query(self, sensor_name, query_data, sensor):
 
 
 @celery.task()
-def tasks_route(sensor_name: str, id=None, channel=None, floor=None, zone=None, control_type=None, is_open=None):
+def tasks_route(sensor_name: str, id=None, channel=None, zone=None, control_type=None, is_open=None):
     if sensor_name == 'RelayControl':
         sensor = Relay.query.filter_by(device_index_code = id, channel = channel).first()
         relay_panel_control.apply_async(args = [id, channel, is_open, sensor], queue = sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
     elif sensor_name == 'LocatorControl':
-        locator = Locators.query.filter_by(floor = floor, zone = zone).first()
-        panel = SwitchPanel.query.filter_by(locator_id = locator.id).first()
+        locator = Locators.query.filter_by(zone = zone).first()
+        panel = SwitchPanel.query.filter_by(locator_id = locator.internal_code).first()
         switch = Switches.query.filter_by(switch_panel_id = panel.id, channel = control_type).first()
         for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
             relay_panel_control.apply_async(args = [int(relay.device_index_code), relay.channel, is_open, relay], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))

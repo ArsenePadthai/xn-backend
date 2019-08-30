@@ -8,7 +8,8 @@ from XNBackend.models import db, HeatMapSnapshots, Users, UserLogins, AppearReco
     LatestPosition, TrackingDevices, EnegyConsumeMonthly, EnergyConsumeDaily,\
 IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators, S3FC20, Relay
 from XNBackend.extension import SaferProxyFix
-from XNBackend.api import api_bp
+from XNBackend.api import api_bp 
+from XNBackend.rest import rest_api_bp 
 import flask_restless
 from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity
 from flask_jwt_extended.exceptions import NoAuthorizationError
@@ -63,6 +64,7 @@ def create_app(config_filename=None):
     add_filters(app)
 
     app.register_blueprint(api_bp)
+    app.register_blueprint(rest_api_bp)
 
     restless_manager = flask_restless.APIManager(app,
                                                  flask_sqlalchemy_db=db)

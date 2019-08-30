@@ -1,3 +1,3 @@
 from flask import Blueprint
 
-api_bp = Blueprint('restful_api', __name__)
+rest_api_bp = Blueprint('restful_api', __name__)

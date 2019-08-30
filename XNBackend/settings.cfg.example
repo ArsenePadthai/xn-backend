@@ -35,6 +35,7 @@ CELERY_QUEUES = (
 
 CELERY_ROUTES = {
     'XNBackend.task.sensor.task.tasks_route':{"queue":"sensor", "routing_key":"sensor"},
+    'XNBackend.task.sensor.task.autocontrol.*':{"queue":"sensor", "routing_key":"sensor"},
     'XNBackend.task.mantunsci.task.*':{"queue":"mantunsci", "routing_key":"mantunsci"},
     'XNBackend.task.hik.task.*':{"queue":"hik", "routing_key":"hik"},
 }

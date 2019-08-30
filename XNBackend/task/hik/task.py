@@ -7,10 +7,10 @@ from XNBackend.task import celery
 from XNBackend.models.models import db, Users, TrackingDevices, AcsRecords, AppearRecords, HeatMapSnapshots
 
 
-hostname = ''
-port = ''
-app_key = ''
-app_secret = ''
+hostname = '192.168.50.117'
+port = '443'
+app_key = '24639065'
+app_secret = 'h3bZQLSRMNdVodIgJ0ZQ'
 s = None
 
 
@@ -25,7 +25,7 @@ def req_session():
 def data_requests(url, body):
     s = req_session()
     date = time.strftime('%a %b %d %H:%M:%S %Z %Y', time.localtime())
-    r = s.post('https://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, headers={'Date':date})    
+    r = s.post('https://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, headers={'Date':date}, verify=False)    
     message = r.json
     return message 
 
@@ -94,7 +94,8 @@ def device_store(self, num, size, is_acs: int):
     url_acs = '/api/resource/v1/acsDoor/advance/acsDoorList'
     body = json.dumps({'pageNo':num, 'pageSize':size})
     try:
-        data = data_requests(url=url_acs if is_acs else url_camera, body)['data']['list']
+        url=url_acs if is_acs else url_camera 
+        data = data_requests(url, body)['data']['list']
     except Exception:
         self.retry(countdown=3.0)
 
@@ -166,14 +167,14 @@ def acs_record(self, num, size, start, end):
 
 def acs_store_group(start, end, size, n):
     count = 0
-    while True:
+    while True: 
         res = group(acs_record.s(i+1+count*n, size, start, end) for i in range(n)).apply_async()
         count += 1
         if res.get()[-1] == 0:
             break
 
 
-@celry.task()
+@celery.task()
 def acs_control(doorIndex: list, controlType):
     result = []
     url = '/api/acs/v1/door/doControl'
