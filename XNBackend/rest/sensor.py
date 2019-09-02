@@ -1,6 +1,6 @@
 from flask_restful import Resource, reqparse
 from XNBackend.models import IRSensors, TrackingDevices, LuxSensors,\
-    FireAlarmSensors, Elevators, Relay, Switches, S3FC20
+    FireAlarmSensors, Elevators, Relay
 
 
 floor_parser = reqparse.RequestParser()
