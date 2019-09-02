@@ -163,6 +163,10 @@ class MantunciBox(db.Model, TimeStampMixin):
     latest_alarm_id = db.Column(Integer, ForeignKey('box_alarms.id',
                                                     ondelete='SET NULL'))
     latest_alarm = relationship('BoxAlarms', foreign_keys=[latest_alarm_id])
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+                           ForeignKey(Locators.internal_code,
+                                      ondelete='SET NULL'))
+    locator = relationship('Locators', foreign_keys=[locator_id])
 
 
 class S3FC20(db.Model, TimeStampMixin):
@@ -239,6 +243,7 @@ class BoxAlarms(db.Model, TimeStampMixin):
     alarm_or_type = db.Column(String(SHORT_LEN))
     info = db.Column(String(MEDIUM_LEN))
     type_number = db.Column(SmallInteger)
+    time = db.Column(TIMESTAMP)
     box = relationship('MantunciBox', foreign_keys=[box_id])
 
     @property
