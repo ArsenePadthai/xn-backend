@@ -1,3 +1,3 @@
 from flask import Blueprint
 
-dashboard_api_bp = Blueprint('restful_api', __name__)
+dashboard_api_bp = Blueprint('dashboard_api', __name__)

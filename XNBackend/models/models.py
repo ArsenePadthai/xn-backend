@@ -257,7 +257,14 @@ class BoxAlarms(db.Model, TimeStampMixin):
             6: '欠压报警',
             7: '温度报警',
             8: '浪涌报警',
-            9: '漏电保护功能正常'
+            9: '漏电保护功能正常',
+            10: '漏电保护自检未完成',
+            11: '打火报警',
+            12: '漏电预警',
+            13: '电流预警',
+            14: '过压预警',
+            15: '欠压预警',
+            16: '通讯报警'
         }
         return alarm_info_mapping[self.type_number]
 
