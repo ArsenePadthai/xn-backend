@@ -58,17 +58,21 @@ class Energy(Resource):
 
         # sum
         for i in elec_3f_light.all():
-            light_all[FLOOR3] += i.latest_record.gW
+            if i.latest_record:
+                light_all[FLOOR3] += i.latest_record.gW
         ac_all[FLOOR3] = 200
         for i in elec_3f_socket.all():
-            socket_all[FLOOR3] += i.latest_record.gW
+            if i.latest_record:
+                socket_all[FLOOR3] += i.latest_record.gW
         for i in elec_3f.all():
-            elec_all[FLOOR3] += i.latest_record.gW
+            if i.latest_record:
+                elec_all[FLOOR3] += i.latest_record.gW
 
         elec_all[FLOOR4] = 600
         elec_all[FLOOR5] = 600
         elec_all[FLOOR6] = 600
         elec_all[FLOOR7] = 600
+
         water_all = [400, 500, 300, 230, 280]
 
         money_all = [350, 640, 562, 354, 645]

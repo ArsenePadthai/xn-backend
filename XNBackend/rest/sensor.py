@@ -13,7 +13,7 @@ def check_ir(floor):
     occupied = 0
     empty = 0
     for i in sensors:
-        if i.latest_record.status:
+        if i.latest_record and i.latest_record.status:
             occupied += 1
             status[i.locator_body.zone - floor * 100 - 1] = True
         else:
@@ -74,15 +74,31 @@ class IRSensor(Resource):
 class Elevator(Resource):
     def get(self):
         elevator1, elevator2 = Elevators.query.all()
+        NO_DATA = -1
+
+        if not elevator1.latest_record:
+            e1_floor = NO_DATA
+            e1_direction = NO_DATA
+        else:
+            e1_floor = elevator1.latest_record.floor
+            e1_direction = elevator1.latest_record.direction
+
+        if not elevator2.latest_record:
+            e2_floor = NO_DATA
+            e2_direction = NO_DATA
+        else:
+            e2_floor = elevator2.latest_record.floor
+            e2_direction = elevator2.latest_record.direction
+
         return {
             "total": 2,
             "elevator1": {
-                "floor": elevator1.latest_record.floor,
-                "direction": elevator1.latest_record.direction,
+                "floor": e1_floor,
+                "direction": e1_direction,
             },
             "elevator2": {
-                "floor": elevator2.latest_record.floor,
-                "direction": elevator2.latest_record.direction,
+                "floor": e2_floor,
+                "direction": e2_direction,
             }
         }
 
@@ -119,13 +135,13 @@ class Light(Resource):
 
         details = dict()
         for i in main_light.all():
-            if i.latest_record.value:
+            if i.latest_record and i.latest_record.value:
                 on_count += 1
                 details.setdefault(str(i.locator.zone), 0)
                 details[str(i.locator.zone)] += 1 << 1
 
         for i in aux_light.all():
-            if i.latest_record.value:
+            if i.latest_record and i.latest_record.value:
                 on_count += 1
                 details.setdefault(str(i.locator.zone), 0)
                 details[str(i.locator.zone)] += 1

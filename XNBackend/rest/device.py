@@ -45,12 +45,12 @@ def floor_detail(floor, main=None, aux=None, tracking=None, e1='', e2='', room=0
 
     main_on_count = 0
     for i in main_light.all():
-        if i.latest_record.value:
+        if i.latest_record and i.latest_record.value:
             main_on_count += 1
 
     aux_on_count = 0
     for i in aux_light.all():
-        if i.latest_record.value:
+        if i.latest_record and i.latest_record.value:
             aux_on_count += 1
     return_data = {
         "fire_alarm": {
@@ -107,8 +107,14 @@ def cal_total(floor_list, property_name, sub_property_name):
 class Device(Resource):
     def get(self):
         elevator1, elevator2 = Elevators.query.all()
-        elevator1_loc = str(elevator1.latest_record.floor) if not elevator1.latest_record.direction else "运行中"
-        elevator2_loc = str(elevator2.latest_record.floor) if not elevator2.latest_record.direction else "运行中"
+        if not elevator1.latest_record:
+            elevator1_loc = "无数据"
+        else:
+            elevator1_loc = str(elevator1.latest_record.floor) if elevator1.latest_record.direction == 0 else "运行中"
+        if not elevator2.latest_record:
+            elevator2_loc = "无数据"
+        else:
+            elevator2_loc = str(elevator2.latest_record.floor) if elevator2.latest_record.direction == 0 else "运行中"
 
         relay_main_light = Relay.query.filter(Relay.switch.has(channel=1))
         relay_aux_light = Relay.query.filter(Relay.switch.has(channel=2))

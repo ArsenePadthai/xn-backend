@@ -20,19 +20,27 @@ def floor_sensors(lux_query=None, pm_co2_query=None):
     fan = False
     fire_alarm = False
 
+    sensor_no_data_count = 0
     if lux_query.all():
         for i in lux_query.all():
-            lux += i.locator_body.value
-        lux /= lux_query.count()
+            if i.locator_body.latest_record:
+                lux += i.locator_body.latest_record.value
+            else:
+                sensor_no_data_count += 1
+        lux /= (lux_query.count() - sensor_no_data_count)
     else:
         lux = 0
 
+    sensor_no_data_count = 0
     if pm_co2_query.all():
         for i in pm_co2_query.all():
-            pm25 += i.locator_body.pm25
-            co2 += i.locator_body.co2
-        pm25 /= pm_co2_query.count()
-        co2 /= pm_co2_query.count()
+            if i.locator_body.latest_record:
+                pm25 += i.locator_body.latest_record.pm25
+                co2 += i.locator_body.latest_record.co2
+            else:
+                sensor_no_data_count += 1
+        pm25 /= (pm_co2_query.count() - sensor_no_data_count)
+        co2 /= (pm_co2_query.count() - sensor_no_data_count)
     else:
         pm25 = 0
         co2 = 0
@@ -80,22 +88,30 @@ class Env(Resource):
         total_tem = (floor3[TEM] + floor4[TEM] + floor5[TEM] + floor6[TEM] + floor7[TEM]) / 5
         total_hum = (floor3[HUM] + floor4[HUM] + floor5[HUM] + floor6[HUM] + floor7[HUM]) / 5
 
+        sensor_no_data_count = 0
         if lux_sensor.all():
             total_lux = 0
             for i in lux_sensor.all():
-                total_lux += i.locator_body.value
-            total_lux_avg = total_lux / lux_sensor.count()
+                if i.locator_body.latest_record:
+                    total_lux += i.locator_body.latest_record.value
+                else:
+                    sensor_no_data_count += 1
+            total_lux_avg = total_lux / (lux_sensor.count() - sensor_no_data_count)
         else:
             total_lux_avg = 0
 
+        sensor_no_data_count = 0
         if pm25_co2_sensor.all():
             total_pm25 = 0
             total_co2 = 0
             for i in pm25_co2_sensor.all():
-                total_pm25 += i.locator_body.pm25
-                total_co2 += i.locator_body.co2
-            total_pm25_avg = total_pm25 / pm25_co2_sensor.count()
-            total_co2_avg = total_co2 / pm25_co2_sensor.count()
+                if i.locator_body.latest_record:
+                    total_pm25 += i.locator_body.latest_record.pm25
+                    total_co2 += i.locator_body.latest_record.co2
+                else:
+                    sensor_no_data_count += 1
+            total_pm25_avg = total_pm25 / (pm25_co2_sensor.count() - sensor_no_data_count)
+            total_co2_avg = total_co2 / (pm25_co2_sensor.count() - sensor_no_data_count)
         else:
             total_pm25_avg = total_co2_avg = 0
 

@@ -25,15 +25,15 @@ class Room(Resource):
 
         ir_value = False
         for i in ir_sensor.all():
-            if i.latest_record.value:
+            if i.latest_record and i.latest_record.value:
                 ir_value = True
 
         acs_lock_value = True
 
         main_light_sensor = relay.filter(Relay.switch.has(channel=SWITCH_MAIN)).first()
-        main_light_value = main_light_sensor.latest_record.value if main_light_sensor else 0
+        main_light_value = main_light_sensor.latest_record.value if (main_light_sensor and main_light_sensor.latest_record) else 0
         aux_light_sensor = relay.filter(Relay.switch.has(channel=SWITCH_AUX)).first()
-        aux_light_value = aux_light_sensor.latest_record.value if aux_light_sensor else 0
+        aux_light_value = aux_light_sensor.latest_record.value if (aux_light_sensor and aux_light_sensor.latest_record) else 0
         return {
             "ac_on": ac_value,
             "main_light": main_light_value,
