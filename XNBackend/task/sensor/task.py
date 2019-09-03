@@ -220,15 +220,15 @@ def relay_panel_control(self, id, channel, is_open):
 
 
 @celery.task(bind=True, serializer='pickle')
-def sensor_query(self, sensor_name, query_data, sensor):
+def sensor_query(self, sensor_name, query_data, id):
     task = {
         'Relay':[RelayStatus, {
             'value': 'status',
-        }],
+        }, Relay],
         'IR':[IRSensorStatus, {
             'value': 'detectValue',
             'status': 'status'
-        }], 
+        }, IRSensors], 
         'AQI':[AQIValues, {
             'temperature': 'temperature',
             'humidity': 'humidity',
@@ -236,12 +236,13 @@ def sensor_query(self, sensor_name, query_data, sensor):
             'co2': 'co2',
             'tvoc': 'tvoc',
             'voc': 'voc'
-        }], 
+        }, AQISensors], 
         'Lux':[LuxValues, {
             'value': 'lux'
-        }]
+        }, LuxSensors]
     }
 
+    sensor = task[sensor_name][2].query.filter_by(id=id).first()
     L.info("Query the status of %s, send '%s' to the server", sensor_name, query_data)
     try:
         data = send_to_server(query_data, sensor.tcp_config.ip, sensor.tcp_config.port)
@@ -278,7 +279,7 @@ def tasks_route(sensor_name: str, channel, is_open, id=None, zone=None):
             relay_panel_control.apply_async(args = [int(relay.device_index_code), relay.channel, is_open], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
     else:
         for data, sensor in data_generate(sensor_name):
-            sensor_query.apply_async(args = [sensor_name, data, sensor], queue = sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
+            sensor_query.apply_async(args = [sensor_name, data, sensor.id], queue = sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
 
     L.info('data stored')
     return ''
