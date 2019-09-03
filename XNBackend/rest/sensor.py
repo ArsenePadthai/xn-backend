@@ -1,10 +1,9 @@
 from flask_restful import Resource, reqparse
-from XNBackend.models import IRSensors, TrackingDevices, LuxSensors,\
-    FireAlarmSensors, Elevators, Relay
+from XNBackend.models import IRSensors, TrackingDevices, LuxSensors, FireAlarmSensors, Elevators, Relay
 
 
 floor_parser = reqparse.RequestParser()
-floor_parser.add_argument('floor', type=int, help='floor number')
+floor_parser.add_argument('floor', required=True, type=int, help='require floor number')
 
 
 def check_ir(floor):
@@ -86,23 +85,6 @@ class Elevator(Resource):
                 "direction": elevator2.latest_record.direction,
             }
         }
-
-
-# class ACS(Resource):
-#     def get(self):
-#         TRACKING_CAM = 0
-#         TRACKING_ACS = 1
-#         floor = floor_parser.parse_args().get('floor')
-#         # acs = TrackingDevices.query.filter(TrackingDevices.locator_body.has(floor=floor)).filter(TrackingDevices.device_type == TRACKING_ACS)
-#         acs_total = 24
-#         acs_close = 24
-#         acs_status = [True] * 24
-#         return {
-#             "total": acs_total,
-#             "open": acs_total - acs_close,
-#             "close": acs_close,
-#             "detail": return_room_status(floor, acs_status)
-#         }
 
 
 class Camera(Resource):

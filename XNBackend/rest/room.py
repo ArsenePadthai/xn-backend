@@ -3,7 +3,7 @@ from XNBackend.models import IRSensors, TrackingDevices, Relay, S3FC20
 
 
 room_parser = reqparse.RequestParser()
-room_parser.add_argument('room', type=int, help='room number')
+room_parser.add_argument('room', required=True, type=int, help='require room number')
 
 
 class Room(Resource):

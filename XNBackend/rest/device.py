@@ -1,7 +1,7 @@
 from flask_restful import Resource
 from XNBackend.models import FireAlarmSensors, IRSensors, Elevators, TrackingDevices, Relay
 from .sensor import check_ir
-
+from functools import partial
 
 FLOOR3 = 0
 FLOOR4 = 1
@@ -11,7 +11,6 @@ FLOOR7 = 4
 
 
 def floor_detail(floor, main=None, aux=None, tracking=None, e1='', e2='', room=0):
-
     def calc_acs(entries):
         count_open = 0
         count_infra = 0
@@ -31,7 +30,7 @@ def floor_detail(floor, main=None, aux=None, tracking=None, e1='', e2='', room=0
     ).all()
     ret = {'total': len(acs)}
     ret.update(calc_acs(acs))
-    
+
     FIRE_DETECTORS = 40
     ALARM = 0
 
@@ -54,49 +53,47 @@ def floor_detail(floor, main=None, aux=None, tracking=None, e1='', e2='', room=0
         if i.latest_record.value:
             aux_on_count += 1
     return_data = {
-        '%df' % floor: {
-            "fire_alarm": {
-                "detectors": FIRE_DETECTORS,
-                "alarms": ALARM,
-                "running": FIRE_DETECTORS - ALARM
-            },
-            "ir_sensors": {
-                "rooms": ROOM_NUMBER,
-                "empty": ir_empty,
-                "offices": int(ROOM_NUMBER / 2),
-                "offices_empty": int(ir_empty / 2),
-                "meeting_room": ROOM_NUMBER - int(ROOM_NUMBER / 2),
-                "meeting_empty": ir_empty - int(ir_empty / 2)
-            },
-            "central_ac": {
-                "outter": 50,
-                "outter_run": 30,
-                "inner": 34,
-                "inner_run": 23,
-                "run_on_empty": 0
-            },
-            "elevator": {
-                "total": 2,
-                "location1": e1,
-                "location2": e2
-            },
-            "camera": {
-                "total": 100,
-                "general": 50,
-                "ai": 50
-            },
-            "light": {
-                "total": str(total_main + total_aux),
-                "total_main": str(total_main),
-                "main_run": str(main_on_count),
-                "total_aux": str(total_aux),
-                "aux_run": str(aux_on_count)
-            }
+        "fire_alarm": {
+            "detectors": FIRE_DETECTORS,
+            "alarms": ALARM,
+            "running": FIRE_DETECTORS - ALARM
+        },
+        "ir_sensors": {
+            "rooms": ROOM_NUMBER,
+            "empty": ir_empty,
+            "offices": int(ROOM_NUMBER / 2),
+            "offices_empty": int(ir_empty / 2),
+            "meeting_room": ROOM_NUMBER - int(ROOM_NUMBER / 2),
+            "meeting_empty": ir_empty - int(ir_empty / 2)
+        },
+        "central_ac": {
+            "outter": 50,
+            "outter_run": 30,
+            "inner": 34,
+            "inner_run": 23,
+            "run_on_empty": 0
+        },
+        "elevator": {
+            "total": 2,
+            "location1": e1,
+            "location2": e2
+        },
+        "camera": {
+            "total": 100,
+            "general": 50,
+            "ai": 50
+        },
+        "light": {
+            "total": str(total_main + total_aux),
+            "total_main": str(total_main),
+            "main_run": str(main_on_count),
+            "total_aux": str(total_aux),
+            "aux_run": str(aux_on_count)
         }
     }
-    return_data.update({'acs':ret)
+    return_data.update({'acs': ret})
 
-    return 
+    return {'%df' % floor: return_data}
 
 
 def cal_total(floor_list, property_name, sub_property_name):
@@ -109,7 +106,6 @@ def cal_total(floor_list, property_name, sub_property_name):
 
 class Device(Resource):
     def get(self):
-
         elevator1, elevator2 = Elevators.query.all()
         elevator1_loc = str(elevator1.latest_record.floor) if not elevator1.latest_record.direction else "运行中"
         elevator2_loc = str(elevator2.latest_record.floor) if not elevator2.latest_record.direction else "运行中"
@@ -118,11 +114,13 @@ class Device(Resource):
         relay_aux_light = Relay.query.filter(Relay.switch.has(channel=2))
         tracking = TrackingDevices.query.filter(TrackingDevices.device_type == 1)
 
-        floor3 = floor_detail(3, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc, e2=elevator2_loc, room=24, tracking=tracking)
-        floor4 = floor_detail(4, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc, e2=elevator2_loc, room=24, tracking=tracking)
-        floor5 = floor_detail(5, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc, e2=elevator2_loc, room=24, tracking=tracking)
-        floor6 = floor_detail(6, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc, e2=elevator2_loc, room=24, tracking=tracking)
-        floor7 = floor_detail(7, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc, e2=elevator2_loc, room=24, tracking=tracking)
+        get_floor_data = partial(floor_detail, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc,
+                                 e2=elevator2_loc, room=24, tracking=tracking)
+        floor3 = get_floor_data(3)
+        floor4 = get_floor_data(4)
+        floor5 = get_floor_data(5)
+        floor6 = get_floor_data(6)
+        floor7 = get_floor_data(7)
 
         total_floor = [floor3, floor4, floor5, floor6, floor7]
 
