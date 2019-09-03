@@ -327,7 +327,7 @@ class IRSensors(db.Model, TimeStampMixin):
                                    ondelete='SET NULL'))
     latest_record_id = db.Column(Integer,
                                  ForeignKey(IRSensorStatus.id,
-                                            ondelete="SET NULL"))
+                                            ondelete='SET NULL'))
     threshold = db.Column(db.Integer)
     delay = db.Column(db.Integer)
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,

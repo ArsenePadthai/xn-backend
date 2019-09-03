@@ -8,8 +8,8 @@ from XNBackend.task.mantunsci.task import *
 
 @api_bp.route('/test', methods=['GET'])
 def test():
-    #tasks_route.delay('RelayControl', 1, 1, 1)
-    #tasks_route.delay('Relay')
+    #tasks_route.delay('RelayControl', 2, 0, id = 1)
+    tasks_route.delay('LocatorControl', 2, 1, zone = 1)
     #circuit_current.delay()
-    init_control.apply_async(queue='sensor')
+    #init_control.delay()
     return jsonify({"hello": "world"})

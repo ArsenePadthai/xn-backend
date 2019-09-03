@@ -7,8 +7,8 @@ from XNBackend.task import celery
 from XNBackend.models.models import db, Users, TrackingDevices, AcsRecords, AppearRecords, HeatMapSnapshots
 
 
-hostname = '192.168.50.117'
-port = '443'
+hostname = '192.168.50.118'
+port = '9016'
 app_key = '24639065'
 app_secret = 'h3bZQLSRMNdVodIgJ0ZQ'
 s = None
@@ -25,7 +25,7 @@ def req_session():
 def data_requests(url, body):
     s = req_session()
     date = time.strftime('%a %b %d %H:%M:%S %Z %Y', time.localtime())
-    r = s.post('https://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, headers={'Date':date}, verify=False)    
+    r = s.post('http://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, verify=False)    
     message = r.json
     return message 
 

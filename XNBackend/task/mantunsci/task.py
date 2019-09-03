@@ -178,7 +178,6 @@ def circuit_current(self):
             db.session.add(circuit_record)
             db.session.flush()
             c20.latest_record_id = circuit_record.id
-            db.session.add(c20)
             db.session.commit()
 
    
@@ -199,7 +198,6 @@ def circuit_alarm(self, start_time, end_time):
             db.session.flush()
             box = MantunciBox.query.filter_by(id = num).first()
             box.latest_alarm_id = alarm_record.id
-            db.session.add(box)
             db.session.commit()
 
 
