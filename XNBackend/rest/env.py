@@ -11,6 +11,10 @@ FAN = 5
 FIRE = 6
 
 
+def form_float(number):
+    return float('%.2f' % number)
+
+
 def floor_sensors(lux_query=None, pm_co2_query=None):
     temperature = 22
     humidity = 66
@@ -45,7 +49,7 @@ def floor_sensors(lux_query=None, pm_co2_query=None):
         pm25 = 0
         co2 = 0
 
-    return [temperature, humidity, lux, co2, pm25, fan, fire_alarm]
+    return [temperature, humidity, form_float(lux), form_float(co2), form_float(pm25), fan, fire_alarm]
 
 
 def return_floor_detail(floor, floor_data):
@@ -119,9 +123,9 @@ class Env(Resource):
             "total": {
                 "temperature": total_tem,
                 "humidity": total_hum,
-                "lux": total_lux_avg,
-                "co2": total_co2_avg,
-                "pm25": total_pm25_avg,
+                "lux": form_float(total_lux_avg),
+                "co2": form_float(total_co2_avg),
+                "pm25": form_float(total_pm25_avg),
                 "fan": floor3[FAN],
                 "fire_alarm": alarm_if_exist
             }

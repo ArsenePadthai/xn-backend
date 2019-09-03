@@ -10,11 +10,11 @@ FLOOR7 = 4
 
 
 def check_divisor_zero(dividend, divisor):
-    return 0 if divisor == 0 else dividend / divisor
+    return 0 if divisor == 0 else float('%.2f' % (dividend / divisor))
 
 
 def form_floor_data(floor_str, floor_index, elec=None, water=None, money=None,
-                    people=None, area=None, ac=None, socket=None, light=None, stored=None):
+                    people=None, area=None, ac=None, socket=None, light=None, kitchen=None):
     avg_elec = check_divisor_zero(elec[floor_index], people[floor_index])
     avg_water = check_divisor_zero(elec[floor_index], people[floor_index])
     avg_by_area = check_divisor_zero(elec[floor_index], area[floor_index])
@@ -31,7 +31,7 @@ def form_floor_data(floor_str, floor_index, elec=None, water=None, money=None,
             "ac_inner": ac[floor_index],
             "socket": socket[floor_index],
             "light": light[floor_index],
-            "stored_energy": stored[floor_index],
+            "kitchen": kitchen[floor_index],
         }
     }
 
@@ -43,7 +43,7 @@ class Energy(Resource):
         MEASURE_AC = 1
         MEASURE_SOCKET = 2
         area_all = [300, 310, 305, 297, 312]
-        stored_energy_all = [460, 341, 421, 164, 235]
+        kitchen_all = [460, 341, 421, 164, 235]
         people_all = [0, 0, 0, 0, 0]
 
         elec_all = [0, 0, 0, 0, 0]  # 3f, 4f, 5f, 6f, 7f
@@ -93,12 +93,12 @@ class Energy(Resource):
                 "ac_inner": sum(ac_all),
                 "socket": sum(socket_all),
                 "light": sum(light_all),
-                "stored_energy": sum(stored_energy_all),
+                "kitchen": sum(kitchen_all),
             }
         }
 
         get_floor_data = partial(form_floor_data, elec=elec_all, water=water_all, money=money_all, people=people_all,
-                                 area=area_all, ac=ac_all, socket=socket_all, light=light_all, stored=stored_energy_all)
+                                 area=area_all, ac=ac_all, socket=socket_all, light=light_all, kitchen=kitchen_all)
 
         return_data.update(get_floor_data('3f', FLOOR3))
         return_data.update(get_floor_data('4f', FLOOR4))
