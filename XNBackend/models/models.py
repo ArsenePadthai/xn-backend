@@ -120,6 +120,7 @@ class AcsRecords(db.Model, TimeStampMixin):
     # status =1 means open status=0 means closing
     status = db.Column(SmallInteger)
     event_type = db.Column(Integer)
+    event_id = db.Column(Unicode(length=LONG_LEN), unique=True)
     acs = relationship('TrackingDevices', foreign_keys=[acs_id])
 
 

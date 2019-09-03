@@ -69,7 +69,6 @@ class Energy(Resource):
         elec_all[FLOOR5] = 600
         elec_all[FLOOR6] = 600
         elec_all[FLOOR7] = 600
-
         water_all = [400, 500, 300, 230, 280]
 
         money_all = [350, 640, 562, 354, 645]
