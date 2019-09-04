@@ -106,6 +106,10 @@ def cal_total(floor_list, property_name, sub_property_name):
 
 class Device(Resource):
     def get(self):
+
+        #
+
+        # elevators
         elevator1, elevator2 = Elevators.query.all()
         if not elevator1.latest_record:
             elevator1_loc = "无数据"
@@ -130,15 +134,17 @@ class Device(Resource):
 
         total_floor = [floor3, floor4, floor5, floor6, floor7]
 
-        total_fire_detectors = cal_total(total_floor, 'fire_alarm', 'detectors')
-        total_fire_alarm = cal_total(total_floor, 'fire_alarm', 'alarms')
+        total_fire_detectors = 37
+        # total_fire_detectors = cal_total(total_floor, 'fire_alarm', 'detectors')
+        # total_fire_alarm = cal_total(total_floor, 'fire_alarm', 'alarms')
+        total_fire_alarm = 'NA'
 
         return_data = {
             "total": {
                 "fire_alarm": {
                     "detectors": total_fire_detectors,
                     "alarms": total_fire_alarm,
-                    "running": total_fire_detectors - total_fire_alarm
+                    "running": 'NA'
                 },
                 "ir_sensors": {
                     "rooms": cal_total(total_floor, 'ir_sensors', 'rooms'),

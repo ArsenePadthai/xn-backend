@@ -496,6 +496,7 @@ class Relay(db.Model, TimeStampMixin):
     __tablename__ = 'relay'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    addr = db.Column(Integer) # protocol needs addr parameter
     channel = db.Column(Integer)
     latest_record_id = db.Column(Integer,
                                  ForeignKey('relay_status.id',
@@ -570,7 +571,12 @@ class AirConditioner(db.Model, TimeStampMixin):
     __tablename__ = 'air_conditioner'
     id = db.Column(Integer, primary_key=True)
     auto_controller_id = db.Column(Integer,
-                                ForeignKey('auto_controllers.id',
-                                           ondelete='SET NULL'))
-    auto_controller = relationship('AutoControllers', foreign_keys=[auto_controller_id])
+                                   ForeignKey('auto_controllers.id',
+                                              ondelete='SET NULL'))
+    ac_on = db.Column(BOOLEAN)
+    temp = db.Column(Float)
+    hum = db.Column(Float)
+    mode = db.Column(SmallInteger)
+    auto_controller = relationship('AutoControllers',
+                                   foreign_keys=[auto_controller_id])
 
