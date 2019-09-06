@@ -9,8 +9,8 @@ from XNBackend.models.models import db, Users, TrackingDevices, AcsRecords, Appe
 
 hostname = '192.168.50.118'
 port = '9016'
-app_key = '24639065'
-app_secret = 'h3bZQLSRMNdVodIgJ0ZQ'
+app_key = '20066086'
+app_secret = 'zlFAtf5tTXSrD57JlYJV'
 s = None
 
 
@@ -24,9 +24,8 @@ def req_session():
 
 def data_requests(url, body):
     s = req_session()
-    date = time.strftime('%a %b %d %H:%M:%S %Z %Y', time.localtime())
     r = s.post('http://{hostname}:{port}/artemis{url}'.format(hostname=hostname, port=port, url=url), json=body, verify=False)    
-    message = r.json
+    message = r.json()
     return message 
 
 
@@ -51,7 +50,7 @@ column_mappings = {
 def user_store(self, num, size):
     users = []
     url = '/api/resource/v1/person/personList'
-    body = json.dumps({'pageNo':num, 'pageSize':size})
+    body = {'pageNo':num, 'pageSize':size}
     try:
         data = data_requests(url, body)['data']['list']
     except Exception:
@@ -92,7 +91,7 @@ def device_store(self, num, size, is_acs: int):
     devices = []
     url_camera = '/api/resource/v1/cameras'
     url_acs = '/api/resource/v1/acsDoor/advance/acsDoorList'
-    body = json.dumps({'pageNo':num, 'pageSize':size})
+    body = {'pageNo':num, 'pageSize':size}
     try:
         url=url_acs if is_acs else url_camera 
         data = data_requests(url, body)['data']['list']
@@ -149,7 +148,7 @@ def people_count():
 @celery.task(bind=True)
 def acs_record(self, num, size, start, end):
     url = '/api/acs/v1/door/events'
-    body = json.dumps({'startTime':start, 'endTime':end, 'pageNo':num, 'pageSize':size})
+    body = {'startTime':start, 'endTime':end, 'pageNo':num, 'pageSize':size}
     try:
         data = data_requests(url, body)['data']['list']
     except KeyError:
@@ -157,7 +156,7 @@ def acs_record(self, num, size, start, end):
 
     for i in range(len(data)):
         device = TrackingDevices.query.filter_by(device_index_code=data[i]['doorIndexCode']).first()
-        record = AcsRecords(acs_id=device.id, event_type=data[i]['eventType'])
+        record = AcsRecords(acs_id=device.id, event_type=data[i]['eventType'], event_id= data[i]['eventId'])
         db.session.add(record)
         db.session.flush()
         device.latest_acs_record_id = record.id
@@ -176,24 +175,8 @@ def acs_store_group(start, end, size, n):
 
 @celery.task()
 def acs_control(doorIndex: list, controlType):
-    result = []
     url = '/api/acs/v1/door/doControl'
-    body = json.dumps({'doorIndexCodes':doorIndex, 'controlType':controlType})
-    data = data_requests(url, body)['data']
-
-    for i in range(len(data)):
-        result.append({data[i]['doorIndexCode']:data[i]['controlResultCode']})
-        if data[i]['controlResultCode'] == 0:
-            device = TrackingDevices.query.filter_by(device_index_code=data[i]['doorIndexCode']).first()
-            try:
-                device.acs_record.status = controlType
-            except Exception:
-                record = AcsRecords(acs_id=device_id, status=controlType)
-                db.session.add(record)
-                db.sesson.flush()
-                device.latest_acs_record_id = record.id 
-    db.session.commit()    
-
-    return result
+    body = {'doorIndexCodes':doorIndex, 'controlType':controlType}
+    data_requests(url, body)
 
 

@@ -27,5 +27,6 @@ api.add_resource(Camera, '/api/dashboard/cameres')
 api.add_resource(Light, '/api/dashboard/lights')
 api.add_resource(FaceRecognition, '/api/dashboard/faceRecog')
 api.add_resource(Acs, '/api/dashboard/acs')
-api.add_resource(AcsCallback, '/api/callback/acs')
+#api.add_resource(AcsCallback, '/api/callback/acs')
+api.add_resource(AcsCallback, '/eventRcv')
 

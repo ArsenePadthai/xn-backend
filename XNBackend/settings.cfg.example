@@ -38,6 +38,9 @@ CELERY_ROUTES = {
     'XNBackend.task.sensor.autoctrl.*':{"queue":"sensor", "routing_key":"sensor"},
     'XNBackend.task.mantunsci.task.*':{"queue":"mantunsci", "routing_key":"mantunsci"},
     'XNBackend.task.hik.task.*':{"queue":"hik", "routing_key":"hik"},
+    'XNBackend.task.hik.acs.face_recognition':{"queue":"196893"},
+    'XNBackend.task.hik.acs.door_control':{"queue":"198919"},
+    'XNBackend.task.hik.acs.door_destory':{"queue":"198657"},
 }
 
 
