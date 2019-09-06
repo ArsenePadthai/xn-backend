@@ -33,7 +33,8 @@ def send_to_server(data, host, port):
         tcp_client(host, port)
     client.send(data)
     data_byte = client.recv(1024)
-    message = data_parse(data_byte)
+    tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
+    message = data_parse(data_byte, tcp.id)
     L.info('Received data: %s', message)
 
     return message
@@ -250,10 +251,10 @@ def sensor_query(self, sensor_name, query_data, id):
         'AQI':[AQIValues, {
             'temperature': 'temperature',
             'humidity': 'humidity',
-            'pm25': 'pm',
+            'pm25': 'pm25',
             'co2': 'co2',
             'tvoc': 'tvoc',
-            'voc': 'voc'
+            'hcho': 'hcho'
         }, AQISensors], 
         'Lux':[LuxValues, {
             'value': 'lux'

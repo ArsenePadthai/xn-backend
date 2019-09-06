@@ -6,15 +6,25 @@ from struct import unpack
 from marshmallow import fields, Schema
 
 from XNBackend.parser.parser import Parsable, ParsableMeta, Marshallable, Unmarshallable
+from XNBackend.models.models import AQISensors
 
 L = logging.getLogger(__name__)
 
 
-def data_parse(bs:bytes):
-    header_info = {'22':NetworkRelayData, 'db':InfraredSensorData, 'dd':AQISensorData, 'df':LuxSensorData}
+def data_parse(bs:bytes, sensor_type):
+    header_info = {'22':NetworkRelayData, 'df':LuxSensorData}
+
     start_code_byte, body = bs[:1], bs[1:]
     start_code = str(binascii.b2a_hex(start_code_byte))[2:-1]
-    data = header_info[start_code].parse(body)
+
+    if start_code == 'db':
+        sensor = AQISensors.query.filter_by(tcp_config_id = sensor_type).first()
+        if sensor is None:
+            data = InfraredSensorData.parse(body)
+        else:
+            data = AQISensorData.parse(body)
+    else:
+        data = header_info[start_code].parse(body)
     return data[0]
 
 '''
@@ -25,6 +35,17 @@ class AddressParseMixin:
         return unpack('>Q', b'\x00\x00\x00' + self.address)[0] & 0xffffffffff
 '''
 
+class InfraredSensorData(Parsable, Marshallable):
+    fields = '''
+        H:address, B:detectValue, B:setValue, B:delay, B:status, B:endCode
+    '''
+
+    class MarshalSchema(Schema):
+        Address = fields.String(attribute='address')
+        Delay = fields.Integer(attribute='delay')
+        Status = fields.Integer(attribute='status')
+
+
 class NetworkRelayData(Parsable, Marshallable):
     fields = '''
         B:id, B:code, L:status, B:endCode
@@ -37,111 +58,34 @@ class NetworkRelayData(Parsable, Marshallable):
         LoadDetect = fields.Integer(attribute='loadDetect')
 
 
-class InfraredSensorData(Parsable, Marshallable):
-    fields = '''
-        H:address, B:detectValue, B:setValue, B:delay, B:status, B:endCode
-    '''
-
-    class MarshalSchema(Schema):
-        Address = fields.String(attribute='address')
-        Delay = fields.Integer(attribute='delay')
-        Status = fields.Integer(attribute='status')
-
-
 class FloatAssembler:
-    def __init__(self, integer, decimal):
+    def __init__(self, integer, decimal, valueType):
         self.integer = integer
         self.decimal = decimal
+        self.value = valueType 
 
     def __get__(self, instance, owner):
         i = getattr(instance, self.integer)
         d = getattr(instance, self.decimal)
-        return float('%d.%d' % (i, d))
+        value = getattr(instance, self.value)
+        ad = (i*256+d)/10
+        if value == 1:
+            return ad 
+        elif value == 2:
+            return 0.17*ad*(5.0/1024)-0.1
+        
 
 class AQISensorData(Parsable, Marshallable):
     fields = '''
-        H:address, B:temperatureInteger, B:temperatureDecimal,
-        B:humidityInteger, B:humidityDecimal,  B:pmInteger, B:pmDecimal,
-        B:co2Integer, B:co2Decimal, B:tvocInteger, B:tvocDecimal,
-        B:vocInteger, B:vocDecimal, B:endCode
+        H:address, H:co2, H:tvoc, H:hcho, 
+        B:pmInteger, B:pmDecimal,
+        B:humidityInteger, B:humidityDecimal,
+        B:temperatureInteger, B:temperatureDecimal, B:endCode
     '''
     
-    temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal')
-    humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal')
-    pm = FloatAssembler(integer='pmInteger', decimal='pmDecimal')
-    co2 = FloatAssembler(integer='co2Integer', decimal='co2Decimal')
-    tvoc = FloatAssembler(integer='tvocInteger', decimal='tvocDecimal')
-    voc = FloatAssembler(integer='vocInteger', decimal='vocDecimal')
-
-    class MarshalSchema(Schema):
-        Address = fields.String(attribute='address')
-        TemperatureInteger = fields.Integer(attribute='temperatureInteger')
-        TemperatureDecimal = fields.Integer(attribute='temperatureDecimal')
-        HumidityInteger = fields.Integer(attribute='humidityInteger')
-        HumidityDecimal = fields.Integer(attribute='humidityDecimal')
-        PmInteger = fields.Integer(attribute='pmInteger')
-class NetworkRelayData(Parsable, Marshallable):
-    fields = '''
-        B:id, B:code, L:status, B:endCode
-    '''
-
-    class MarshalSchema(Schema):
-        ID = fields.Integer(attribute='id')
-        Channel = fields.Integer(attribute='channel')
-        Status = fields.Integer(attribute='status')
-        LoadDetect = fields.Integer(attribute='loadDetect')
-
-
-class InfraredSensorData(Parsable, Marshallable):
-    fields = '''
-        H:address, B:detectValue, B:setValue, B:delay, B:status, B:endCode
-    '''
-
-    class MarshalSchema(Schema):
-        Address = fields.String(attribute='address')
-        Delay = fields.Integer(attribute='delay')
-        Status = fields.Integer(attribute='status')
-
-
-class FloatAssembler:
-    def __init__(self, integer, decimal):
-        self.integer = integer
-        self.decimal = decimal
-
-    def __get__(self, instance, owner):
-        i = getattr(instance, self.integer)
-        d = getattr(instance, self.decimal)
-        return float('%d.%d' % (i, d))
-
-class AQISensorData(Parsable, Marshallable):
-    fields = '''
-        H:address, B:temperatureInteger, B:temperatureDecimal,
-        B:humidityInteger, B:humidityDecimal,  B:pmInteger, B:pmDecimal,
-        B:co2Integer, B:co2Decimal, B:tvocInteger, B:tvocDecimal,
-        B:vocInteger, B:vocDecimal, B:endCode
-    '''
-    
-    temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal')
-    humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal')
-    pm = FloatAssembler(integer='pmInteger', decimal='pmDecimal')
-    co2 = FloatAssembler(integer='co2Integer', decimal='co2Decimal')
-    tvoc = FloatAssembler(integer='tvocInteger', decimal='tvocDecimal')
-    voc = FloatAssembler(integer='vocInteger', decimal='vocDecimal')
-
-    class MarshalSchema(Schema):
-        Address = fields.String(attribute='address')
-        TemperatureInteger = fields.Integer(attribute='temperatureInteger')
-        TemperatureDecimal = fields.Integer(attribute='temperatureDecimal')
-        HumidityInteger = fields.Integer(attribute='humidityInteger')
-        HumidityDecimal = fields.Integer(attribute='humidityDecimal')
-        PmInteger = fields.Integer(attribute='pmInteger')
-        PmDecimal = fields.Integer(attribute='pmDecimal')
-        Co2Integer = fields.Integer(attribute='co2Integer')
-        Co2Decimal = fields.Integer(attribute='co2Decimal')
-        TvocInteger = fields.Integer(attribute='tvocInteger')
-        TvocDecimal = fields.Integer(attribute='tvocDecimal')
-        VocInteger = fields.Integer(attribute='vocInteger')
-        VocDecimal = fields.Integer(attribute='vocDecimal')
+    temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal', valueType=1)
+    humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal', valueType=1)
+    pm25 = FloatAssembler(integer='pmInteger', decimal='pmDecimal', valueType=2)
 
 
 class LuxSensorData(Parsable, Marshallable):
