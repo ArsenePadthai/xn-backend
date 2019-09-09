@@ -150,12 +150,10 @@ def client_recv(ip, port):
             if panel.panel_type == 0:
                 switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
             else:
-                if i == 1 or i == 3:
+                if i == 2 or i == 3:
                     continue 
-                elif i == 0:
-                    switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
                 else:
-                    switch = session.query(Switches).filter_by(channel = 2, switch_panel_id = panel.id).first()
+                    switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
             if switch == None or switch.status == value:
                 continue
             for relay in session.query(Relay).filter_by(switch_id = switch.id).order_by():
@@ -208,12 +206,10 @@ def relay_panel_control(self, id, channel, is_open):
     else: 
         for switch in Switches.query.filter_by(switch_panel_id = panel.id).order_by():
             if switch.channel < sensor.switch.channel:
-                data_pre = ('0'+str(switch.status))*2
+                data = ('0'+str(switch.status))+('0'+str(is_open))+'0000'
             elif switch.channel > sensor.switch.channel:
-                data = ('0'+str(is_open))*2
-                data += ('0'+str(switch.status))*2
+                data = ('0'+str(is_open))+('0'+str(switch.status))+'0000'
  
-    #all_data = (data_pre+data).ljust(8, '0')
     all_data = data_pre+data
     data_bytes = bytes.fromhex('DA')+pack('>B', panel.batch_no)+pack('>B', panel.addr_no)+pack('>B', 2)+bytes.fromhex(all_data)+bytes.fromhex('EE')
     client_send.apply_async(args = [data_bytes], queue = panel.tcp_config.ip+':'+str(panel.tcp_config.port))
