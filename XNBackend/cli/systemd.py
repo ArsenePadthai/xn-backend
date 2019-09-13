@@ -17,4 +17,5 @@ def control(code):
     os.system('sudo systemctl {} xn-sensor@sensor.service'.format(code))
     for tcp in TcpConfig.query.order_by():
         addr = tcp.ip + ':' + str(tcp.port)
+        click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
         os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))

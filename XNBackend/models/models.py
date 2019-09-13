@@ -469,11 +469,11 @@ class Switches(db.Model, TimeStampMixin):
         if self.channel == 1:
             return u'main light'
         elif self.channel == 2:
-            return u'aux light'
+            return u'acs'
         elif self.channel == 3:
-            return u'fan'
-        elif self.channel == 4:
             return u'auto'
+        elif self.channel == 4:
+            return u'aux light'
 
     @property
     def double_control_type_readable(self):
