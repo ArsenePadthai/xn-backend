@@ -4,13 +4,16 @@ import sys
 import time
 from datetime import datetime
 from threading import Thread
-from struct import pack, unpack 
-from XNBackend.task import celery, logger
-from XNBackend.models.models import db, Locators, IRSensorStatus, IRSensors, AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, RelayStatus, TcpConfig, AutoControllers 
-from XNBackend.parser.protocol import data_parse
+from struct import pack, unpack
 from celery.signals import worker_process_init
-from sqlalchemy import create_engine, or_ 
-from sqlalchemy.orm import sessionmaker 
+from sqlalchemy import create_engine, or_
+from sqlalchemy.orm import sessionmaker
+
+from XNBackend.parser.protocol import data_parse
+from XNBackend.task import celery, logger
+from XNBackend.models.models import db, Locators, IRSensorStatus, IRSensors, \
+AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, \
+    RelayStatus, TcpConfig, AutoControllers
 
 
 L = logger.getChild(__name__)
@@ -22,37 +25,38 @@ client = None
 
 
 def tcp_client(host, port):
-    global client 
+    global client
     try:
         client.close()
     except:
         pass
     try:
-        client = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.settimeout(15)
         client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 15)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
-        client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
-        client.connect((host, port))   
-        L.info('success Connected to %s: %s', host, port)
-    except Exception as e:
-        L.exception('=====================')
+        # only linux has below settings
+        if hasattr(socket, "TCP_KEEPIDLE") and hasattr(socket, "TCP_KEEPINTVL") and hasattr(socket, "TCP_KEEPCNT"):
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10)
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
+            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+        client.connect((host, port))
+        client.setblocking(1)
+        L.info('success Connected to %s: %s' % (host, port))
+    except Exception:
+        L.exception('failed to create tcp connetion')
 
 
 def send_to_server(data, host, port):
     assert client is not None, 'TCP client not initialized'
     client.send(data)
-    #data_byte = client.recv(1024)
-    #tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
-    #message = data_parse(data_byte, tcp.id)
-    #L.info('Received data: %s', message)
+    # data_byte = client.recv(1024)
+    # tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
+    # message = data_parse(data_byte, tcp.id)
+    # L.info('Received data: %s', message)
 
-    #return message
+    # return message
 
 
-
-'''
 def keep_alive(ip, port):
     while 1:
         time.sleep(10)
@@ -60,19 +64,18 @@ def keep_alive(ip, port):
         data = bytes.fromhex('DA {} {} 86 86 86 EE'.format(hex(panel.batch_no)[2:].rjust(2, '0'), hex(panel.addr_no)[2:].rjust(2,'0')))
         try:
             client.send(data)
-            L.info('send keep alive data to ')
+            #L.info('send keep alive data to ')
         except Exception as e:
-            L.exception('keep_alive error')
+            #L.exception('keep_alive error')
             pass
-'''
 
 
 def data_generate(model):
     models = {
-        'Relay':[Relay, '55', '10 00 00 00 00'], 
-        'IR':[IRSensors, 'DA', '86 86 86 EE'], 
-        'AQI':[AQISensors, 'DC', '86 86 86 EE'], 
-        'Lux':[LuxSensors, 'DE', '86 86 86 EE']
+        'Relay': [Relay, '55', '10 00 00 00 00'],
+        'IR': [IRSensors, 'DA', '86 86 86 EE'],
+        'AQI': [AQISensors, 'DC', '86 86 86 EE'],
+        'Lux': [LuxSensors, 'DE', '86 86 86 EE']
     }
 
     if model == 'Relay':
@@ -85,9 +88,8 @@ def data_generate(model):
             yield data, sensor
 
 
- 
 def day_control(control): 
-    for swicth in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
+    for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
         for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
             network_relay_control.apply_async(args = [relay.id, relay.channel, 0], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
  
@@ -96,11 +98,11 @@ def day_control(control):
 def night_control(control):
     panel = SwitchPanel.query.filter_by(id=control.switch_panel_id).first()
     if panel.panel_type == 0:
-        for swicth in Switches.query.filter_by(or_(channel==1, channel==2), switch_panel_id=control.switch_panel_id).order_by():
+        for switch in Switches.query.filter_by(or_(channel==1, channel==2), switch_panel_id=control.switch_panel_id).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
                 network_relay_control.apply_async(args = [relay.id, relay.channel, 0], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
     else:
-        for swicth in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
+        for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
                 network_relay_control.apply_async(args = [relay.id, relay.channel, 0], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
 
@@ -192,74 +194,56 @@ def network_relay_control(self, id, channel, is_open):
     '''
 
 
-
-def client_recv(ip, port):
-    client.setblocking(1)
-    while True:
-        try:
-            L.info('begin to recv data')
-            recv_data = client.recv(1024)
-            L.info(recv_data)
-        except Exception as e:
-            L.exception('some error, try to restart worker')
-            tcp_client(ip, port)
-            #celery.control.pool_restart(reload = True, destination=['worker@'+ip+':'+str(port)])
-
-        # todo
-        if len(recv_data)<8:
-            L.info('received len data < 8')
-            tcp_client(ip, port)
-            time.sleep(10)
-            #celery.control.pool_restart(reload = True, destination=['worker@'+ip+':'+str(port)])
-            
-        dirty = False
-        while int(len(recv_data)/8):
-            data, recv_data = recv_data[0:8], recv_data[8:]
-            startcode, batch, addr, status = unpack('>B', data[:1])[0], unpack('>B', data[1:2])[0], unpack('>B', data[2:3])[0], data[3:-1]
-            panel = session.query(SwitchPanel).filter_by(batch_no = batch, addr_no = addr).first()
-            for i in range(len(status)):
-                value = unpack('>B', status[i:i+1])[0] & 0x11 
-                if panel.panel_type == 0:
-                    switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
+def handle_switch_signal(data):
+    startcode, batch, addr, status = unpack('>B', data[:1])[0], unpack('>B', data[1:2])[0], unpack('>B', data[2:3])[0], data[3:-1]
+    panel = session.query(SwitchPanel).filter_by(batch_no = batch, addr_no = addr).first()
+    if panel:
+        for i in range(len(status)):
+            value = unpack('>B', status[i:i+1])[0] & 0x11 
+            if panel.panel_type == 0:
+                switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
+            else:
+                if i == 2 or i == 3:
+                    continue 
                 else:
-                    if i == 2 or i == 3:
-                        continue 
-                    else:
-                        switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
-                if switch == None or switch.status == value:
-                    continue
-                for relay in session.query(Relay).filter_by(switch_id = switch.id).order_by():
-                    #network_relay_control_sync(relay.id, relay.channel, value)
-                    network_relay_control_sync.apply_async(args = [relay.id, relay.channel, value], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
-                switch.status = value 
-                dirty = True
+                    switch = session.query(Switches).filter_by(channel = i+1, switch_panel_id = panel.id).first()
+            if switch == None or switch.status == value:
+                continue
+            for relay in session.query(Relay).filter_by(switch_id = switch.id).order_by():
+                network_relay_control_sync.apply_async(args = [relay.id, relay.channel, value], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
+            switch.status = value 
 
-        if dirty:
             try:
                 session.commit()
             except:
                 L.exception('db commit failure')
                 session.rollback()
+    else:
+        L.warning('No cooresponding panel found')
 
 
 
-'''
-def recv_from_server(ip, port):
-    global client
-    try:
-        client_recv(ip, port)
-    except Exception as e:
-        L.exception('loss connection at '+ datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+def client_recv(ip, port):
+    recv_data = bytearray()
+    while True:
         try:
-            client.close()
+            delta_data = client.recv(1024)
+            if not delta_data:
+                raise Exception('Zero Data Received, need to restart child processes pool')
+            recv_data += delta_data
+            if len(recv_data) > 255:
+                raise Exception('%d bytes received, too long' % len(recv_data))
         except Exception:
-            L.exception('fdfdf')
-        try:
-            tcp_client(ip, port)
-            L.info('rebuild connection done')
-        except Exception:
-            pass
-'''
+            L.exception('try to restart child processes pool...')
+            celery.control.pool_restart(reload = True, destination=['worker@'+ip+':'+str(port)])
+
+        while int(len(recv_data)/8):
+            data, recv_data = recv_data[0:8], recv_data[8:]
+            try:
+                handle_switch_signal(data)
+            except Exception:
+                L.exception('data processing error, skip...')
+            
 
 
 @worker_process_init.connect 
@@ -269,24 +253,19 @@ def configure_workers(sender=None, **kwargs):
         assert '-n' in sys.argv, 'worker name must be assigned by -n'
         hostname = sys.argv[sys.argv.index('-n') + 1]
         addr = hostname.split('@')[1].split(':')
-        L.error('xxxx')
-        L.error(addr)
-        tcp = session.query(TcpConfig).filter_by(ip = addr[0], port = int(addr[1])).first()
-        L.error('yyy')
-        L.error(tcp)
-        switch = session.query(SwitchPanel).filter_by(tcp_config_id = tcp.id).count()
-        if switch != 0:
-            tcp_client(addr[0], int(addr[1]))
-            thread = Thread(target = client_recv, args=(addr[0], int(addr[1])))
-            #thread1 = Thread(target = keep_alive, args=(addr[0], int(addr[1])))
-            thread.daemon=True
-            #thread1.daemon=True
-            thread.start()
-            #thread1.start()
-    except Exception as e:
-        L.exception('configure works')
-        client = None
-
+        # for now, only consider light
+        # for now, only consider light
+        # for now, only consider light
+        # TODO add compatibility to tcp servers of other sensor
+        # tcp = session.query(TcpConfig).filter_by(ip = addr[0], port = int(addr[1])).first()
+        # switch = session.query(SwitchPanel).filter_by(tcp_config_id = tcp.id).count()
+        # if switch != 0:
+        tcp_client(addr[0], int(addr[1]))
+        thread = Thread(target = client_recv, args=(addr[0], int(addr[1])))
+        thread.daemon=True
+        thread.start()
+    except Exception:
+        L.exception('configure works failed')
 
 
 @celery.task(bind=True, serializer='pickle')
@@ -416,5 +395,3 @@ def tasks_route(sensor_name: str, channel, is_open, id=None, zone=None):
     L.info('data stored')
     return ''
  
-
-

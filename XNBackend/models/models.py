@@ -237,8 +237,8 @@ class BoxAlarms(db.Model, TimeStampMixin):
     __tablename__ = 'box_alarms'
     id = db.Column(Integer, primary_key=True)
     box_id = db.Column(Integer, ForeignKey(MantunciBox.id,
-                                                       ondelete='CASCADE'),
-                                   nullable=False)
+                                           ondelete='CASCADE'),
+                       nullable=False)
     addr = db.Column(Integer)
     node = db.Column(String(MEDIUM_LEN))
     alarm_or_type = db.Column(String(SHORT_LEN))

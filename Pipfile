@@ -8,6 +8,7 @@ pep8 = "*"
 flake8 = "*"
 pylint = "*"
 rope = "*"
+autopep8 = "*"
 
 [packages]
 requests = "*"
