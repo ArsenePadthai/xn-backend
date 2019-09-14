@@ -33,14 +33,12 @@ def tcp_client(host, port):
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.settimeout(15)
-        client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        # only linux has below settings
-        if hasattr(socket, "TCP_KEEPIDLE") and hasattr(socket, "TCP_KEEPINTVL") and hasattr(socket, "TCP_KEEPCNT"):
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10)
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
-            client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+        # client.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # if hasattr(socket, "TCP_KEEPIDLE") and hasattr(socket, "TCP_KEEPINTVL") and hasattr(socket, "TCP_KEEPCNT"):
+        #    client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 10)
+        #    client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
+        #    client.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
         client.connect((host, port))
-        client.setblocking(1)
         L.info('success Connected to %s: %s' % (host, port))
     except Exception:
         L.exception('failed to create tcp connetion')
@@ -59,15 +57,20 @@ def send_to_server(data, host, port):
 
 def keep_alive(ip, port):
     while 1:
-        time.sleep(10)
+        try:
+            client
+        except NameError:
+            time.sleep(3)
+            continue
+
+        # reprequisite: CAN receive response after sending query data
         panel = session.query(SwitchPanel).filter(SwitchPanel.tcp_config.has(ip = ip)).first()
         data = bytes.fromhex('DA {} {} 86 86 86 EE'.format(hex(panel.batch_no)[2:].rjust(2, '0'), hex(panel.addr_no)[2:].rjust(2,'0')))
         try:
             client.send(data)
-            #L.info('send keep alive data to ')
-        except Exception as e:
-            #L.exception('keep_alive error')
-            pass
+        except Exception:
+            L.exception(f'failed to send query data to panel {panel.id}')
+        time.sleep(10)
 
 
 def data_generate(model):
@@ -234,6 +237,8 @@ def client_recv(ip, port):
             if len(recv_data) > 255:
                 raise Exception('%d bytes received, too long' % len(recv_data))
         except Exception:
+            L.info('after 10s later, restart processes pool')
+            time.sleep(10)
             L.exception('try to restart child processes pool...')
             celery.control.pool_restart(reload = True, destination=['worker@'+ip+':'+str(port)])
 
@@ -245,14 +250,16 @@ def client_recv(ip, port):
                 L.exception('data processing error, skip...')
             
 
-
 @worker_process_init.connect 
 def configure_workers(sender=None, **kwargs):
     global client 
+    time.sleep(10)
     try:
         assert '-n' in sys.argv, 'worker name must be assigned by -n'
         hostname = sys.argv[sys.argv.index('-n') + 1]
         addr = hostname.split('@')[1].split(':')
+        if len(addr) < 2:
+            return
         # for now, only consider light
         # for now, only consider light
         # for now, only consider light
@@ -262,8 +269,12 @@ def configure_workers(sender=None, **kwargs):
         # if switch != 0:
         tcp_client(addr[0], int(addr[1]))
         thread = Thread(target = client_recv, args=(addr[0], int(addr[1])))
-        thread.daemon=True
+        thread_ka = Thread(target = keep_alive, args=(addr[0], int(addr[1])))
+        thread.daemon = True
+        thread_ka = True
         thread.start()
+        time.sleep(2)
+        thread_ka.start()
     except Exception:
         L.exception('configure works failed')
 

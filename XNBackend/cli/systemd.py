@@ -1,7 +1,7 @@
 import click
 import os 
 from flask.cli import AppGroup
-from XNBackend.models.models import TcpConfig
+from XNBackend.models import TcpConfig, SwitchPanel
 
 systemd = AppGroup('systemd')
 
@@ -15,7 +15,18 @@ systemd = AppGroup('systemd')
 )
 def control(code):
     os.system('sudo systemctl {} xn-sensor@sensor.service'.format(code))
-    for tcp in TcpConfig.query.order_by():
+    tcp_config_ids = SwitchPanel.query.filter(
+        SwitchPanel.tcp_config_id!=None
+        ).with_entities(
+            SwitchPanel.tcp_config_id
+            ).distinct().all()
+    
+    # 46 not online
+    # 47 has no response
+    tcp_config_ids = [i[0] for i in tcp_config_ids if i[0] not in [46, 47]]
+
+    ret = TcpConfig.query.filter(TcpConfig.id.in_(tcp_config_ids)).all()
+    for tcp in ret:
         addr = tcp.ip + ':' + str(tcp.port)
         click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
         os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))

@@ -231,7 +231,7 @@ def circuit_alarm(self, minute_range=-5.5):
             # db.session.commit()
 
 
-@celery.taks(bind=True)
+@celery.task(bind=True)
 # todo need testing
 def control_airfan(self, cmd):
     # 大楼的新风系统，目前暂定由某个曼顿的盒子控制
