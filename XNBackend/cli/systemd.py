@@ -21,12 +21,14 @@ def control(code):
             SwitchPanel.tcp_config_id
             ).distinct().all()
     
-    # 46 not online
-    # 47 has no response
-    tcp_config_ids = [i[0] for i in tcp_config_ids if i[0] not in [46, 47]]
-
+    tcp_config_ids = [i[0] for i in tcp_config_ids]
     ret = TcpConfig.query.filter(TcpConfig.id.in_(tcp_config_ids)).all()
     for tcp in ret:
+        # 46 not online
+        # 47 has no response
+        # remove ========================================== later
+        if tcp.ip in ['10.100.102.46', '10.100.102.47']:
+            continue
         addr = tcp.ip + ':' + str(tcp.port)
         click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
         os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))

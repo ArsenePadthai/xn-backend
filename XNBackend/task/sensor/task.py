@@ -253,7 +253,6 @@ def client_recv(ip, port):
 @worker_process_init.connect 
 def configure_workers(sender=None, **kwargs):
     global client 
-    time.sleep(10)
     try:
         assert '-n' in sys.argv, 'worker name must be assigned by -n'
         hostname = sys.argv[sys.argv.index('-n') + 1]
@@ -271,7 +270,7 @@ def configure_workers(sender=None, **kwargs):
         thread = Thread(target = client_recv, args=(addr[0], int(addr[1])))
         thread_ka = Thread(target = keep_alive, args=(addr[0], int(addr[1])))
         thread.daemon = True
-        thread_ka = True
+        thread_ka.daemon = True
         thread.start()
         time.sleep(2)
         thread_ka.start()
