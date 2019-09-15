@@ -1,0 +1,14 @@
+[Unit]
+Description=General Celery Worker For xn-backend
+
+[Service]
+Type=simple
+User=xn
+WorkingDirectory=/home/xn/xn-backend
+Environment=XN_SETTINGS=../settings.cfg
+ExecStart=/home/local/bin/pipenv run python -m celery -A XNBackend.app worker -c 4
+Restart=always
+RestartSec=100ms
+
+[Install]
+WantedBy=multi-user.target
