@@ -14,6 +14,15 @@ systemd = AppGroup('systemd')
     help='start or stop celery worker'
 )
 def control(code):
+    #os.system('sudo systemctl {} xn-sensor@sensor.service'.format(code))
+    for tcp in TcpConfig.query.order_by():
+        if tcp.ip in ['10.100.102.3']:
+            continue
+        addr = tcp.ip + ':' + str(tcp.port)
+        click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
+        os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
+'''
+def control(code):
     os.system('sudo systemctl {} xn-sensor@sensor.service'.format(code))
     tcp_config_ids = SwitchPanel.query.filter(
         SwitchPanel.tcp_config_id!=None
@@ -32,3 +41,4 @@ def control(code):
         addr = tcp.ip + ':' + str(tcp.port)
         click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
         os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
+'''
