@@ -18,6 +18,8 @@ AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, \
 
 L = logger.getChild(__name__)
 engine = create_engine('mysql+pymysql://test:test@127.0.0.1:3306/xn?charset=utf8mb4', echo=True)
+Session = sessionmaker(bind=engine)
+session = Session()
 
 client = None
 
@@ -45,17 +47,17 @@ def tcp_client(host, port):
 def send_to_server(data, host, port):
     assert client is not None, 'TCP client not initialized'
     client.send(data)
-    data_byte = client.recv(1024)
-    tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
-    message = data_parse(data_byte, tcp.id)
-    L.info('Received data: %s', message)
+    # data_byte = client.recv(1024)
+    # tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
+    # message = data_parse(data_byte, tcp.id)
+    # L.info('Received data: %s', message)
 
-    return message
+    # return message
 
 
-def keep_alive(ip, port):
+def keep_alive(ip, port, local_data):
     Session = sessionmaker(bind=engine)
-    session = Session()
+    local_data.session = Session()
     while 1:
         try:
             client
@@ -64,7 +66,7 @@ def keep_alive(ip, port):
             continue
 
         # reprequisite: CAN receive response after sending query data
-        panel = session.query(SwitchPanel).filter(SwitchPanel.tcp_config.has(ip = ip)).first()
+        panel = local_data.session.query(SwitchPanel).filter(SwitchPanel.tcp_config.has(ip = ip)).first()
         data = bytes.fromhex('DA {} {} 86 86 86 EE'.format(hex(panel.batch_no)[2:].rjust(2, '0'), hex(panel.addr_no)[2:].rjust(2,'0')))
         try:
             client.send(data)
@@ -94,7 +96,7 @@ def data_generate(model):
 def day_control(control): 
     for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
         for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-            network_relay_control_sync.apply_async(args = [relay.id, relay.channel, 0], queue = 'relay')
+            network_relay_control.apply_async(args = [relay.id, relay.channel, 0], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
  
 
 
@@ -103,11 +105,11 @@ def night_control(control):
     if panel.panel_type == 0:
         for switch in Switches.query.filter_by(or_(channel==1, channel==2), switch_panel_id=control.switch_panel_id).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-                network_relay_control_sync.apply_async(args = [relay.id, relay.channel, 0], queue = 'relay')
+                network_relay_control.apply_async(args = [relay.id, relay.channel, 0], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
     else:
         for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id, channel=1).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-                network_relay_control_sync.apply_async(args = [relay.id, relay.channel, 0], queue = 'relay')
+                network_relay_control.apply_async(args = [relay.id, relay.channel, 0], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
 
 
  
@@ -155,24 +157,43 @@ def network_relay_control_sync(self, relay_id, channel, is_open):
     except:
         pass
 
+    
+@celery.task(bind=True, serializer='pickle')
+def network_relay_control(self, id, channel, is_open):
+    global client
+    sensor = Relay.query.filter_by(id=id).first()
+    code = '32' if is_open else '31'
+    data = bytes.fromhex('55') + pack('>B', sensor.addr) + bytes.fromhex(code + '00 00 00') + pack('>B', channel) + bytes.fromhex(hex(int(code, 16) + 85 + sensor.addr + channel)[-2:])
+
+    L.error(client.getpeername())
+    L.error("Control relay, send '%s' to id: %d", data, sensor.id)
+    try:
+        L.error('try to send data to server')
+        L.error(data)
+        send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
+        #recv_data = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
+        #L.info('Received data from relay at id of %s: %s', recv_data.id, recv_data)
+    except Exception:
+        L.exception('send to server part')
+        client = None
+        self.retry(countdown=3.0)
     '''
     if sensor.switch.channel == 1 or sensor.switch.channel == 2 and sensor.switch.switch_panel.panel_type == 0:
         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
         control.if_auto = 0
-    elif sensor.switch.channel == 3 or sensor.switch.channel == 2 and sensor.switch.switch_panel.panel_type == 1:
+    elif sensor.switch.channel == 4 or sensor.switch.channel == 2 and sensor.switch.switch_panel.panel_type == 1:
         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
         if is_open:
             ir_query.apply_async(args = [control.id, False], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
         control.if_auto = is_open 
-    '''
-    record = RelayStatus(relay_id = sensor.id, value = is_open)
+    record = RelayStatus(relay_id = sensor.id, value = (recv_data.status & (1 << channel-1)) != 0)
     db.session.add(record)
     db.session.flush()
 
     sensor.latest_record_id = record.id
     db.session.commit()
     L.info('Relay: control successfully')
-    
+    '''
 
 
 @celery.task(serializer='pickle')
@@ -192,7 +213,7 @@ def handle_switch_signal(data):
             if switch == None or switch.status == value:
                 continue
             for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
-                network_relay_control_sync.apply_async(args = [relay.id, relay.channel, value], queue = 'relay')
+                network_relay_control_sync.apply_async(args = [relay.id, relay.channel, value], queue = relay.tcp_config.ip+':'+str(relay.tcp_config.port))
             switch.status = value 
 
             try:
@@ -238,14 +259,22 @@ def configure_workers(sender=None, **kwargs):
         addr = hostname.split('@')[1].split(':')
         if len(addr) < 2:
             return
-        tcp_client(addr[0], int(addr[1]))
-        thread = Thread(target = client_recv, args=(addr[0], int(addr[1])))
-        thread_ka = Thread(target = keep_alive, args=(addr[0], int(addr[1]), d))
-        thread.daemon = True
-        thread_ka.daemon = True
-        thread.start()
-        time.sleep(2)
-        thread_ka.start()
+        # for now, only consider light
+        # for now, only consider light
+        # for now, only consider light
+        # TODO add compatibility to tcp servers of other sensor
+        # tcp = session.query(TcpConfig).filter_by(ip = addr[0], port = int(addr[1])).first()
+        # switch = session.query(SwitchPanel).filter_by(tcp_config_id = tcp.id).count()
+        if addr[0] in ['10.100.102.1', '10.100.102.2', '10.100.102.4']:
+            tcp_client(addr[0], int(addr[1]))
+            d = threading_local()
+            thread = Thread(target = client_recv, args=(addr[0], int(addr[1])))
+            thread_ka = Thread(target = keep_alive, args=(addr[0], int(addr[1]), d))
+            thread.daemon = True
+            thread_ka.daemon = True
+            thread.start()
+            time.sleep(2)
+            thread_ka.start()
     except Exception:
         L.exception('configure works failed')
 

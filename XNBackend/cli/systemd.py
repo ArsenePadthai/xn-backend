@@ -14,9 +14,9 @@ systemd = AppGroup('systemd')
     help='start or stop celery worker'
 )
 def control(code):
-    #os.system('sudo systemctl {} xn-sensor@sensor.service'.format(code))
+    os.system('sudo systemctl {} xn-sensor@relay.service'.format(code))
     for tcp in TcpConfig.query.order_by():
-        if tcp.ip in ['10.100.102.3']:
+        if tcp.ip in ['10.100.102.3'] or '10.100.101' in tcp.ip:
             continue
         addr = tcp.ip + ':' + str(tcp.port)
         click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
