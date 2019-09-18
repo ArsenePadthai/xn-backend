@@ -346,10 +346,10 @@ class AQIValues(db.Model, TimeStampMixin):
                                               ondelete="CASCADE"))
     temperature = db.Column(Float)
     humidity = db.Column(Float)
-    pm25 = db.Column(Float)
+    pm25 = db.Column(db.DECIMAL(8, 3))
     co2 = db.Column(Float)
     tvoc = db.Column(Float)
-    voc = db.Column(Float)
+    hcho = db.Column(Float)
     sensor = relationship('AQISensors', foreign_keys=[sensor_id])
 
 

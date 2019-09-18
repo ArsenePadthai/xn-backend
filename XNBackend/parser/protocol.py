@@ -68,24 +68,31 @@ class FloatAssembler:
         i = getattr(instance, self.integer)
         d = getattr(instance, self.decimal)
         value = getattr(instance, self.value)
-        ad = (i*256+d)/10
-        if value == 1:
-            return ad 
-        elif value == 2:
+        ad = (i*256+d)
+        if value == 'temp':
+            return ad/10 
+        elif value == 'pm25':
             return 0.17*ad*(5.0/1024)-0.1
+        elif value == 'co2':
+            return 44*ad/22.4
+        else:
+            return ad 
         
 
 class AQISensorData(Parsable, Marshallable):
     fields = '''
-        H:address, H:co2, H:tvoc, H:hcho, 
-        B:pmInteger, B:pmDecimal,
+        H:address, B:co2Integer,  B:co2Decimal, B:tvocInteger, B:tvocDecimal, 
+        B:hchoInteger, B:hchoDecimal, B:pmInteger, B:pmDecimal,
         B:humidityInteger, B:humidityDecimal,
         B:temperatureInteger, B:temperatureDecimal, B:endCode
     '''
     
-    temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal', valueType=1)
-    humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal', valueType=1)
-    pm25 = FloatAssembler(integer='pmInteger', decimal='pmDecimal', valueType=2)
+    temperature = FloatAssembler(integer='temperatureInteger', decimal='temperatureDecimal', valueType='temp')
+    humidity = FloatAssembler(integer='humidityInteger', decimal='humidityDecimal', valueType='temp')
+    co2 = FloatAssembler(integer='co2Integer', decimal='co2Decimal', valueType='co2')
+    tvoc = FloatAssembler(integer='tvocInteger', decimal='tvocDecimal', valueType='tvoc')
+    hcho = FloatAssembler(integer='hchoInteger', decimal='hchoDecimal', valueType='hcho')
+    pm25 = FloatAssembler(integer='pmInteger', decimal='pmDecimal', valueType='pm25')
 
 
 class LuxSensorData(Parsable, Marshallable):

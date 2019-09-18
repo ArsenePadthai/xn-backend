@@ -47,12 +47,11 @@ def tcp_client(host, port):
 def send_to_server(data, host, port):
     assert client is not None, 'TCP client not initialized'
     client.send(data)
-    # data_byte = client.recv(1024)
-    # tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
-    # message = data_parse(data_byte, tcp.id)
-    # L.info('Received data: %s', message)
-
-    # return message
+    data_byte = client.recv(1024)
+    tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
+    message = data_parse(data_byte, tcp.id)
+    L.info('Received data: %s', message)
+    return message
 
 
 def keep_alive(ip, port, local_data):
@@ -79,7 +78,7 @@ def data_generate(model):
     models = {
         'Relay': [Relay, '55', '10 00 00 00 00'],
         'IR': [IRSensors, 'DA', '86 86 86 EE'],
-        'AQI': [AQISensors, 'DC', '86 86 86 EE'],
+        'AQI': [AQISensors, 'DA', '86 86 86 EE'],
         'Lux': [LuxSensors, 'DE', '86 86 86 EE']
     }
 
@@ -157,7 +156,7 @@ def network_relay_control_sync(self, relay_id, channel, is_open):
     except:
         pass
 
-    
+'''    
 @celery.task(bind=True, serializer='pickle')
 def network_relay_control(self, id, channel, is_open):
     global client
@@ -171,17 +170,17 @@ def network_relay_control(self, id, channel, is_open):
         L.error('try to send data to server')
         L.error(data)
         send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
-        #recv_data = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
-        #L.info('Received data from relay at id of %s: %s', recv_data.id, recv_data)
+        recv_data = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
+        L.info('Received data from relay at id of %s: %s', recv_data.id, recv_data)
     except Exception:
         L.exception('send to server part')
         client = None
         self.retry(countdown=3.0)
-    '''
-    if sensor.switch.channel == 1 or sensor.switch.channel == 2 and sensor.switch.switch_panel.panel_type == 0:
+    
+    if sensor.switch.channel == 1 or sensor.switch.channel == 4 and sensor.switch.switch_panel.panel_type == 0:
         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
         control.if_auto = 0
-    elif sensor.switch.channel == 4 or sensor.switch.channel == 2 and sensor.switch.switch_panel.panel_type == 1:
+    elif sensor.switch.channel == 3 or sensor.switch.channel == 2 and sensor.switch.switch_panel.panel_type == 1:
         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
         if is_open:
             ir_query.apply_async(args = [control.id, False], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
@@ -193,7 +192,7 @@ def network_relay_control(self, id, channel, is_open):
     sensor.latest_record_id = record.id
     db.session.commit()
     L.info('Relay: control successfully')
-    '''
+'''    
 
 
 @celery.task(serializer='pickle')
