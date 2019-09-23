@@ -15,8 +15,7 @@ from XNBackend.models.models import db, Locators, IRSensorStatus, IRSensors, \
 
 
 L = logger.getChild(__name__)
-ENGINE = create_engine('mysql+pymysql://test:test@127.0.0.1:3306/xn?\
-    charset=utf8mb4', echo=True)
+ENGINE = create_engine('mysql+pymysql://test:test@127.0.0.1:3306/xn?charset=utf8mb4', echo=True)
 
 client = None
 
