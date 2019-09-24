@@ -11,7 +11,7 @@ from XNBackend.models.models import AQISensors
 L = logging.getLogger(__name__)
 
 
-def data_parse(bs:bytes, sensor_type):
+def data_parse(bs:bytes, sensor_type=None):
     header_info = {'22':NetworkRelayData, 'df':LuxSensorData}
 
     start_code_byte, body = bs[:1], bs[1:]

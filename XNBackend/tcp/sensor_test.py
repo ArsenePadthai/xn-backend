@@ -36,7 +36,7 @@ def tcp_server(bind_port):
     server.listen(5)
     client,addr = server.accept()
     while True:
-        #print("[*] Acception connection from %s:%d" % (addr[0],addr[1]))
+        print("[*] Acception connection from %s:%d" % (addr[0],addr[1]))
         data = client.recv(1024)
         #relay_send(data[1:3])
         infrared_send(data[1:3])
