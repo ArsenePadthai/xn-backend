@@ -226,9 +226,9 @@ def network_relay_control_sync(relay_id, is_open):
 
 
 @celery.task(serializer='pickle')
-def handle_switch_signal(data):
+def handle_switch_signal(data, ip):
     batch, addr, status = unpack('>B', data[1:2])[0], unpack('>B', data[2:3])[0], data[3:-1]
-    panel = SwitchPanel.query.filter_by(batch_no = batch, addr_no = addr).first()
+    panel = SwitchPanel.query.filter_by(batch_no = batch, addr_no = addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
     if panel:
         for i in range(len(status)):
             value = unpack('>B', status[i:i+1])[0] & 0x11 
@@ -276,7 +276,7 @@ def client_recv(ip, port):
             if data[0] != 219 or data[-1] != 238:
                 recv_data = bytearray()
                 continue
-            handle_switch_signal.apply_async(args=[data], queue=ip+':'+str(port))
+            handle_switch_signal.apply_async(args=[data, ip], queue=ip+':'+str(port))
 
 
 
