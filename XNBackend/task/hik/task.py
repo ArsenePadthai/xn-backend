@@ -1,5 +1,3 @@
-import json
-import time
 import requests
 from celery import group
 from hikvision_auth.auth import HIKVisionAuth
@@ -134,7 +132,7 @@ def people_count():
     for device in TrackingDevices.query.order_by():
         if device.device_type == 1:
             continue 
-        num = AppearRecords.query.filter_by(device_id == device.id).count()
+        num = AppearRecords.query.filter_by(device_id = device.id).count()
         try:
             snapshot = HeatMapSnapshots.query.filter_by(device_id = device.id).first()
             snapshot.count = num
