@@ -40,11 +40,13 @@ class Energy(Resource):
 
     def get(self):
         MEASURE_LIGHT = 0
-        MEASURE_AC = 1
+        # TODO add ac later
+        # MEASURE_AC = 1
         MEASURE_SOCKET = 2
+        # TODO check area
         area_all = [300, 310, 305, 297, 312]
         kitchen_all = [460, 341, 421, 164, 235]
-        people_all = [0, 0, 0, 0, 0]
+        people_all = [137, 87, 107, 90, 123]
 
         elec_all = [0, 0, 0, 0, 0]  # 3f, 4f, 5f, 6f, 7f
         ac_all = [2, 3, 2, 3, 4]
@@ -75,7 +77,8 @@ class Energy(Resource):
 
         water_all = [400, 500, 300, 230, 280]
 
-        money_all = [350, 640, 562, 354, 645]
+        # TODO need to adjust the factor 1.4
+        money_all = [1.4*i for i in elec_all]
 
         total_avg_elec = check_divisor_zero(sum(elec_all), sum(people_all))
         total_avg_water = check_divisor_zero(sum(water_all), sum(people_all))

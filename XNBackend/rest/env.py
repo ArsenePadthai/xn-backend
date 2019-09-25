@@ -49,7 +49,8 @@ def floor_sensors(lux_query=None, pm_co2_query=None):
         pm25 = 0
         co2 = 0
 
-    return [temperature, humidity, form_float(lux), form_float(co2), form_float(pm25), fan, fire_alarm]
+    return [temperature, humidity, form_float(lux), form_float(co2), form_float(pm25), fan,
+            fire_alarm]
 
 
 def return_floor_detail(floor, floor_data):

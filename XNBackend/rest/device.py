@@ -1,7 +1,7 @@
 from flask_restful import Resource
-from XNBackend.models import FireAlarmSensors, IRSensors, Elevators, TrackingDevices, Relay
-from .sensor import check_ir
 from functools import partial
+from .sensor import check_ir
+from XNBackend.models import FireAlarmSensors, IRSensors, Elevators, TrackingDevices, Relay
 
 FLOOR3 = 0
 FLOOR4 = 1
@@ -107,8 +107,6 @@ def cal_total(floor_list, property_name, sub_property_name):
 class Device(Resource):
     def get(self):
 
-        #
-
         # elevators
         elevator1, elevator2 = Elevators.query.all()
         if not elevator1.latest_record:
@@ -121,11 +119,11 @@ class Device(Resource):
             elevator2_loc = str(elevator2.latest_record.floor) if elevator2.latest_record.direction == 0 else "运行中"
 
         relay_main_light = Relay.query.filter(Relay.switch.has(channel=1))
-        relay_aux_light = Relay.query.filter(Relay.switch.has(channel=2))
+        relay_aux_light = Relay.query.filter(Relay.switch.has(channel=4))
         tracking = TrackingDevices.query.filter(TrackingDevices.device_type == 1)
 
-        get_floor_data = partial(floor_detail, main=relay_main_light, aux=relay_aux_light, e1=elevator1_loc,
-                                 e2=elevator2_loc, room=24, tracking=tracking)
+        get_floor_data = partial(floor_detail, main=relay_main_light, aux=relay_aux_light,
+                                 e1=elevator1_loc, e2=elevator2_loc, room=24, tracking=tracking)
         floor3 = get_floor_data(3)
         floor4 = get_floor_data(4)
         floor5 = get_floor_data(5)
