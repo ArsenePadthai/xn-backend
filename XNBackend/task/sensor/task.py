@@ -107,7 +107,7 @@ def day_control(control_id):
     for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id,
                                            channel=1).order_by():
         for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-            relay_panel_control.apply_async(args=[relay.addr, relay.channel, 0], queue='relay')
+            relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
 
 
 def night_control(control_id):
@@ -117,12 +117,12 @@ def night_control(control_id):
         for switch in Switches.query.filter(or_(Switches.channel == 1, Switches.channel == 2),
                                             switch_panel_id=control.switch_panel_id).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-                relay_panel_control.apply_async(args=[relay.addr, relay.channel, 0], queue='relay')
+                relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
     else:
         for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id,
                                                channel=1).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-                relay_panel_control.apply_async(args=[relay.addr, relay.channel, 0], queue='relay')
+                relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
 
 
 
@@ -320,11 +320,11 @@ def client_send(self, data):
 
 
 @celery.task(serializer='pickle')
-def relay_panel_control(addr, channel, is_open):
+def relay_panel_control(relay_id, is_open):
     data_pre = ''
     
     try:
-        sensor = Relay.query.filter_by(addr=addr, channel=channel).first()
+        sensor = Relay.query.filter_by(id=relay_id).first()
         panel = SwitchPanel.query.filter_by(id = sensor.switch.switch_panel_id).first()
         if panel.panel_type == 0:
             data = '0'+str(is_open)
@@ -371,7 +371,7 @@ def relay_query(self, query_data, id):
     else:
         pass 
     status = ((data.status & 1 << sensor.channel-1) != 0)
-    relay_panel_control.apply_async(args=[sensor.addr, sensor.channel, status], queue='relay')
+    relay_panel_control.apply_async(args=[sensor.id, status], queue='relay')
     record = RelayStatus(relay_id=sensor.id, value=status) 
     db.session.add(record)
     db.session.flush()
@@ -425,15 +425,15 @@ def sensor_query(self, sensor_name, query_data, id):
 
 
 @celery.task()
-def tasks_route(sensor_name: str, channel, is_open, addr=None, zone=None):
+def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
     if sensor_name == 'RelayControl':
-        relay_panel_control.apply_async(args=[addr, channel, is_open], queue='relay')
+        relay_panel_control.apply_async(args=[relay_id, is_open], queue='relay')
     elif sensor_name == 'LocatorControl':
         locator = Locators.query.filter_by(zone=zone).first()
         panel = SwitchPanel.query.filter_by(locator_id=locator.internal_code).first()
         switch = Switches.query.filter_by(switch_panel_id=panel.id, channel=channel).first()
         for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
-            relay_panel_control.apply_async(args=[relay.addr, relay.channel, is_open], queue='relay')
+            relay_panel_control.apply_async(args=[relay.id, is_open], queue='relay')
     else:
         for data, sensor in data_generate(sensor_name):
             if sensor_name == 'Relay':
