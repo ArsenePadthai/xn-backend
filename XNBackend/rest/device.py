@@ -58,6 +58,7 @@ def floor_detail(floor, main=None, aux=None, tracking=None, e1='', e2='', room=0
             "alarms": ALARM,
             "running": FIRE_DETECTORS - ALARM
         },
+        # TODO implement actual data
         "ir_sensors": {
             "rooms": ROOM_NUMBER,
             "empty": ir_empty,

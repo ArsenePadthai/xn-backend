@@ -9,7 +9,7 @@ acs_parser.add_argument('room_no', required=True, type=str)
 acs_get_parser = reqparse.RequestParser()
 acs_get_parser.add_argument('floor',
                             required=True,
-                            type=int,
+                            type=str,
                             help='wrong floor parameter')
 
 
@@ -18,16 +18,13 @@ class AcsControl(Resource):
         args = acs_parser.parse_args()
         room_no = int(args.get('room_no'))
 
-        try:
-            locator = Locators.query.filter_by(zone = room_no).first()
-            device = TrackingDevices.query.filter_by(locator=locator.internal_code).first()
-            acs = [device.device_index_code]
-        except AttributeError:
-            return ('wrong request', 400)
-
-        acs_control.delay(acs, 2)
-
-        return ('successful open the door', 200)
+        device = TrackingDevices.query.filter(
+            TrackingDevices.locator_body.has(zone=room_no)
+        ).first()
+        if not device:
+            return ('can not find door acs device', 400)
+        acs_control.delay(device.device_index_code, 2)
+        return ('order has been initiated', 200)
 
 
 class Acs(Resource):

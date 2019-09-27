@@ -19,5 +19,4 @@ class LightControl(Resource):
             channel = 4
 
         tasks_route.delay('LocatorControl', channel, is_open, zone=zone)
-
         return ('successful update status of light', 200)

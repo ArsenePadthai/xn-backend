@@ -423,7 +423,6 @@ def sensor_query(self, sensor_name, query_data, id):
     db.session.commit()
 
 
-
 @celery.task()
 def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
     if sensor_name == 'RelayControl':

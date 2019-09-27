@@ -176,5 +176,3 @@ def acs_control(doorIndex: list, controlType):
     url = '/api/acs/v1/door/doControl'
     body = {'doorIndexCodes':doorIndex, 'controlType':controlType}
     data_requests(url, body)
-
-

@@ -50,8 +50,6 @@ def count_alarm(enties):
 class MantunciBoxAlarm(Resource):
     def get(self):
         # TODO allow customized startTime and endTime in request parameter
-        args = parser.parse_args()
-        #
         end_time = datetime.utcnow()
         start_time = datetime.utcnow() - timedelta(days=7)
         # TODO ADD COMPARE
@@ -63,14 +61,20 @@ class MantunciBoxAlarm(Resource):
             BoxAlarms.time < end_time
         )
 
-        box_ids = MantunciBox.query.filter(MantunciBox.locator.has(floor=3)).all()
-        box_ids = [i.id for i in box_ids]
-        query_3f = BoxAlarms.query.filter(BoxAlarms.box_id.in_(box_ids))
         ret_all = query_all.all()
-        ret_3f = query_3f.all()
+
+        def query_xf(floor):
+            box_ids = MantunciBox.query.filter(MantunciBox.locator.has(floor=3)).all()
+            box_ids = [i.id for i in box_ids]
+            ret = BoxAlarms.query.filter(BoxAlarms.box_id.in_(box_ids))
+            return count_alarm(ret)
+
         return {
             'total': count_alarm(ret_all),
-            '3f': count_alarm(ret_3f),
+            '3f': query_xf(3),
+            '4f': query_xf(4),
+            '5f': query_xf(5),
+            '6f': query_xf(6),
             '7f': {
                 'short_circuit': 0,
                 'leak': 0,

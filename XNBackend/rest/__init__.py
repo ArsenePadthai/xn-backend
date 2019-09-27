@@ -18,6 +18,7 @@ api.add_resource(MantunciBoxAlarm, '/api/dashboard/alarm')
 api.add_resource(Energy, '/api/dashboard/energy')
 api.add_resource(Env, '/api/dashboard/env')
 api.add_resource(Device, '/api/dashboard/device')
+# mark as read
 api.add_resource(Room, '/api/dashboard/room')
 api.add_resource(AirCondition, '/api/dashboard/air_condition')
 api.add_resource(FireDetector, '/api/dashboard/fire_detector')
@@ -28,4 +29,3 @@ api.add_resource(Light, '/api/dashboard/lights')
 api.add_resource(FaceRecognition, '/api/dashboard/faceRecog')
 api.add_resource(Acs, '/api/dashboard/acs')
 api.add_resource(AcsCallback, '/api/callback/acs')
-
