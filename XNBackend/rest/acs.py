@@ -4,7 +4,7 @@ from XNBackend.task.hik.task import acs_control
 from XNBackend.models.models import db, TrackingDevices, Locators
 
 acs_parser = reqparse.RequestParser()
-acs_parser.add_argument('room_no', type=str)
+acs_parser.add_argument('room_no', required=True, type=str)
 
 acs_get_parser = reqparse.RequestParser()
 acs_get_parser.add_argument('floor',
