@@ -1,0 +1,15 @@
+[Unit]
+Description=Continuous ping daemon task
+after=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=xn
+PIDFile=/var/run/pingpong.pid
+WorkingDirectory=/home/xn/xn-backend
+ExecStart=/home/xn/.local/share/virtualenvs/xn-backend-OW3wpJxa/bin/python /home/xn/xn-backend/scripts/ping.py
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=on-failure

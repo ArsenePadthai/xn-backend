@@ -1,0 +1,15 @@
+[Unit]
+Description=All light on
+after=network.target
+
+[Install]
+WantedBy=multi-user.target
+
+[Service]
+User=xn
+PIDFile=/var/run/xn_light.pid
+WorkingDirectory=/home/xn/xn-backend
+ExecStart=/home/xn/.local/share/virtualenvs/xn-backend-OW3wpJxa/bin/python /home/xn/xn-backend/lightctl.py
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=on-failure

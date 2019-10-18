@@ -6,10 +6,10 @@ after=network.target
 WantedBy=multi-user.target
 
 [Service]
-User=web
+User=xn
 PIDFile=/var/run/xnback.pid
-WorkingDirectory=/home/web/xn-backend
-ExecStart= /home/web/.local/share/virtualenvs/xn-backend-LQJphCxc/bin/gunicorn --chdir /home/web/xn-backend -c /etc/xnback/gunicorn.conf XNBackend.app.entry:app
+WorkingDirectory=/home/xn/xn-backend
+ExecStart= /home/xn/.local/share/virtualenvs/xn-backend-OW3wpJxa/bin/gunicorn --chdir /home/xn/xn-backend -c /etc/xnback/gunicorn.conf XNBackend.app.entry:app
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
 Restart=on-failure
