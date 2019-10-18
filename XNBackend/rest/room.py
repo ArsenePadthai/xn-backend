@@ -10,7 +10,7 @@ class Room(Resource):
     def get(self):
         room_number = room_parser.parse_args().get('room')
         SWITCH_MAIN = 1
-        SWITCH_AUX = 2
+        SWITCH_AUX = 4
         SWITCH_FAN = 3
         SWITCH_AUTO = 4
         S3FC20_LIGHT = 0
