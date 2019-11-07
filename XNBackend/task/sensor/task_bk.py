@@ -227,6 +227,7 @@ def network_relay_control_sync(relay_id, is_open):
 
 @celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
+    L.error('xxxxxxxxxxxxxxxxxxxxxxx')
     batch, addr, status = unpack('>B', data[1:2])[0], unpack('>B', data[2:3])[0], data[3:-1]
     panel = SwitchPanel.query.filter_by(batch_no = batch, addr_no = addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
     if panel:
@@ -265,9 +266,7 @@ def client_recv(ip, port):
             recv_data += delta_data
             if len(recv_data) > 255:
                 raise Exception(f'{len(recv_data)} bytes received, too long')
-            #L.error('++++++++++++++++++++++++++')
-            #L.error(recv_data)
-            #L.error('++++++++++++++++++++++++++')
+            L.error(recv_data)
         except Exception:
             L.info('after 10s later, restart processes pool')
             time.sleep(10)
@@ -283,7 +282,7 @@ def client_recv(ip, port):
 
 
 
-@worker_process_init.connect(retry=True)
+@worker_process_init.connect
 def configure_workers(sender=None, **kwargs):
     Session = sessionmaker(bind=ENGINE)
     session = Session()
@@ -293,9 +292,6 @@ def configure_workers(sender=None, **kwargs):
         addr = hostname.split('@')[1].split(':')
         if len(addr) < 2:
             return
-        L.error('==========================')
-        L.error(f'start to configure worker: {hostname}, {addr}')
-        L.error('==========================')
         tcp_client(addr[0], int(addr[1]))
         sensor = session.query(IRSensors).filter(
             IRSensors.tcp_config.has(ip=addr[0])
@@ -310,9 +306,6 @@ def configure_workers(sender=None, **kwargs):
             thread_ka.start()
     except Exception:
         L.exception('configure works failed')
-        time.sleep(300)
-        raise Exception('x')
-
 
 
 

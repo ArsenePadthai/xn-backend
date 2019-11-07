@@ -6,10 +6,10 @@ after=network.target
 WantedBy=multi-user.target
 
 [Service]
-User=xn
+User=xineng
 PIDFile=/var/run/pingpong.pid
-WorkingDirectory=/home/xn/xn-backend
-ExecStart=/home/xn/.local/share/virtualenvs/xn-backend-OW3wpJxa/bin/python /home/xn/xn-backend/scripts/ping.py
+WorkingDirectory=/home/xineng/xn-backend
+ExecStart=/home/xineng/.local/share/virtualenvs/xn-backend-62k_6oca/bin/python /home/xineng/xn-backend/scripts/ping.py
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
 Restart=on-failure
