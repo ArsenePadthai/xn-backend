@@ -284,6 +284,8 @@ def configure_workers(sender=None, **kwargs):
     try:
         assert '-n' in sys.argv, 'worker name must be assigned by -n'
         hostname = sys.argv[sys.argv.index('-n') + 1]
+        if hostname == 'general':
+            return
         addr = hostname.split('@')[1].split(':')
         if len(addr) < 2:
             return
@@ -429,11 +431,14 @@ def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
     if sensor_name == 'RelayControl':
         network_relay_control_sync.apply_async(args=[relay_id, is_open], queue='relay')
     elif sensor_name == 'LocatorControl':
-        locator = Locators.query.filter_by(zone=zone).first()
-        panel = SwitchPanel.query.filter_by(locator_id=locator.internal_code).first()
+        panel = SwitchPanel.query.filter(SwitchPanel.locator.has(zone=zone)).first()
+        if not panel:
+            L.error(f'for zone {zone}, no panel can be found!')
+            return 
         switch = Switches.query.filter_by(switch_panel_id=panel.id, channel=channel).first()
         for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
             network_relay_control_sync.apply_async(args=[relay.id, is_open], queue='relay')
+            L.info(f'remote control light-delay {relay.id}')
     else:
         for data, sensor in data_generate(sensor_name):
             if sensor_name == 'Relay':
