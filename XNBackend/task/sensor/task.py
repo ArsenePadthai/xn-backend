@@ -203,14 +203,13 @@ def auto_change(relay_id, is_open):
             db.session.rollback()
 
 
-
 @celery.task(serializer='pickle')
 def network_relay_control_sync(relay_id, is_open):
     sensor = Relay.query.filter_by(id=relay_id).first()
     code = '32' if is_open else '31'
     data = bytes.fromhex('55') + pack('>B', sensor.addr) + bytes.fromhex(code + '00 00 00') + pack('>B',sensor.channel) + bytes.fromhex(hex(int(code, 16) + 85 + sensor.addr + sensor.channel)[-2:])
 
-    client_temp = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+    client_temp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_temp.connect((sensor.tcp_config.ip, sensor.tcp_config.port))
     try:
         client_temp.send(data)
@@ -220,9 +219,6 @@ def network_relay_control_sync(relay_id, is_open):
         client_temp.close()
     except Exception:
         pass
-    
-    #auto_change.apply_async(args=[sensor.id, is_open], queue='relay')
-    
 
 
 @celery.task(serializer='pickle')
@@ -254,7 +250,6 @@ def handle_switch_signal(data, ip):
         L.error('No cooresponding panel found')
 
 
-
 def client_recv(ip, port):
     recv_data = bytearray()
     while True:
@@ -280,7 +275,6 @@ def client_recv(ip, port):
                 recv_data = bytearray()
                 continue
             handle_switch_signal.apply_async(args=[data, ip], queue=ip+':'+str(port))
-
 
 
 @worker_process_init.connect(retry=True)
@@ -315,7 +309,6 @@ def configure_workers(sender=None, **kwargs):
 
 
 
-
 @celery.task(bind=True, serializer='pickle')
 def client_send(self, data):
     global client
@@ -327,11 +320,10 @@ def client_send(self, data):
         celery.control.pool_restart(reload=True, destination=[self.request.hostname])
 
 
-
 @celery.task(serializer='pickle')
 def relay_panel_control(relay_id, is_open):
     data_pre = ''
-    
+
     try:
         sensor = Relay.query.filter_by(id=relay_id).first()
         panel = SwitchPanel.query.filter_by(id = sensor.switch.switch_panel_id).first()
@@ -435,13 +427,13 @@ def sensor_query(self, sensor_name, query_data, id):
 @celery.task()
 def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
     if sensor_name == 'RelayControl':
-        relay_panel_control.apply_async(args=[relay_id, is_open], queue='relay')
+        network_relay_control_sync.apply_async(args=[relay_id, is_open], queue='relay')
     elif sensor_name == 'LocatorControl':
         locator = Locators.query.filter_by(zone=zone).first()
         panel = SwitchPanel.query.filter_by(locator_id=locator.internal_code).first()
         switch = Switches.query.filter_by(switch_panel_id=panel.id, channel=channel).first()
-        for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
-            relay_panel_control.apply_async(args=[relay.id, is_open], queue='relay')
+        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
+            network_relay_control_sync.apply_async(args=[relay.id, is_open], queue='relay')
     else:
         for data, sensor in data_generate(sensor_name):
             if sensor_name == 'Relay':

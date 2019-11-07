@@ -570,13 +570,18 @@ class AutoControllers(db.Model, TimeStampMixin):
 class AirConditioner(db.Model, TimeStampMixin):
     __tablename__ = 'air_conditioner'
     id = db.Column(Integer, primary_key=True)
-    auto_controller_id = db.Column(Integer,
-                                   ForeignKey('auto_controllers.id',
-                                              ondelete='SET NULL'))
+    desired_speed = db.Column(Float)
+    if_online = db.Column(BOOLEAN)
+    desired_mode = db.Column(SmallInteger)
+    temperature = db.Column(Float)
     ac_on = db.Column(BOOLEAN)
-    temp = db.Column(Float)
-    hum = db.Column(Float)
-    mode = db.Column(SmallInteger)
-    auto_controller = relationship('AutoControllers',
-                                   foreign_keys=[auto_controller_id])
+    desired_temperature = db.Column(Float)
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
+                                                                  ondelete='SET NULL'))
+    #hum = db.Column(Float)
+    #auto_controller = relationship('AutoControllers',
+    #                               foreign_keys=[auto_controller_id])
+    # auto_controller_id = db.Column(Integer,
+    #                                ForeignKey('auto_controllers.id',
+    #                                           ondelete='SET NULL'))
 
