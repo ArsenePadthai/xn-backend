@@ -8,6 +8,7 @@ WantedBy=multi-user.target
 [Service]
 User=xineng
 WorkingDirectory=/home/xineng/xn-backend
+Environment=XN_SETTINGS=../settings.cfg
 ExecStart = /home/xineng/.local/share/virtualenvs/xn-backend-62k_6oca/bin/celery -A XNBackend.app worker -c 4 -n general --logfile=/var/log/xnback/%n.log --pidfile=/var/run/xnback/%n.pid
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/bin/kill -s TERM $MAINPID
