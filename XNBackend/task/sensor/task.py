@@ -101,7 +101,8 @@ def keep_alive(ip, port):
 
 
 @celery.task()
-def send_data_to_panel(data):
+def send_data_to_panel(addr, four_bits):
+    data = bytes.fromhex(f'DA 06 {addr} 02') + bytes(four_bits)
     try:
         client.send(data)
     except Exception as e:

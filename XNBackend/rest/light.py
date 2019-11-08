@@ -1,7 +1,7 @@
 from flask_restful import Resource, reqparse
 from XNBackend.task.sensor.task import tasks_route, send_data_to_panel
 from XNBackend.models import SwitchPanel
-from utils import query_panel_status
+from ..utils import query_panel_status
 
 light_parser = reqparse.RequestParser()
 light_parser.add_argument('room_no', required=True, type=str)
@@ -15,10 +15,6 @@ class LightControl(Resource):
         room_no = str(args.get('room_no'))
         light_type = args.get('level')
         is_open = args.get('action')
-        if light_type == 0:
-            channel = 1
-        else:
-            channel = 4
 
         sp = SwitchPanel.query.filter(SwitchPanel.locator_id == room_no).first()
         if not sp:
@@ -30,24 +26,23 @@ class LightControl(Resource):
         s_3 = ret[-3]
         s_4 = ret[-2]
 
-        light_action = '01' if is_open else '00'
         if light_type == 0:
+            channel = 1
             # main light
-            data_to_send = bytes.fromhex(f'DA 06 {sp.addr_no} 02 {light_action}') \
-                + bytes([s_2, s_3, s_4])
+            four_bits = [is_open, s_2, s_3, s_4]
         else:
+            channel = 4
             # aux light
             if sp.panel_type == 0:
-                # four switches
-                data_to_send = bytes.fromhex(f'DA 06 {sp.addr_no} 02') \
-                    + s_1 + s_2 + s_3 + bytes.fromhex(f'{light_action}')
+                four_bits = [s_1, s_2, s_3, is_open]
             else:
                 # two switches
-                data_to_send = bytes.fromhex(f'DA 06 {sp.addr_no} 02') \
-                    + s_1 + bytes.fromhex(f'{light_action}') + s_3 + s_4
+                four_bits = [s_1, is_open, s_3, s_4]
 
+        the_q = f'{sp.tcp_config.ip}:{sp.tcp_config.port}'
+        print(the_q)
         tasks_route.delay('LocatorControl', channel, is_open, zone=room_no)
-        send_data_to_panel.apply_async(args=[data_to_send],
-                                       queue=f'{sp.tcp_config.ip}:{sp.tcp_config.port}')
+        send_data_to_panel.apply_async(args=[sp.addr_no, four_bits],
+                                       queue=the_q)
 
         return ('successful update status of light', 200)
