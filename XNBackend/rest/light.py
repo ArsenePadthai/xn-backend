@@ -24,7 +24,7 @@ class LightControl(Resource):
         if not sp:
             return (f'no matching panel found for this room {room_no}', 200)
 
-        ret = query_panel_status(sp.locator.ip, sp.batch_no, sp.addr_no)
+        ret = query_panel_status(sp.tcp_config.ip, sp.batch_no, sp.addr_no)
         s_1 = ret[-5]
         s_2 = ret[-4]
         s_3 = ret[-3]
@@ -33,7 +33,8 @@ class LightControl(Resource):
         light_action = '01' if is_open else '00'
         if light_type == 0:
             # main light
-            data_to_send = bytes.fromhex(f'DA 06 {sp.addr_no} 02 {light_action}') + s_2 + s_3 + s_4
+            data_to_send = bytes.fromhex(f'DA 06 {sp.addr_no} 02 {light_action}') \
+                + bytes([s_2, s_3, s_4])
         else:
             # aux light
             if sp.panel_type == 0:
