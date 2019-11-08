@@ -76,7 +76,6 @@ def data_generate(model):
             yield data, sensor 
 
 
-
 def keep_alive(ip, port):
     Session = sessionmaker(bind=ENGINE)
     session = Session()
@@ -101,6 +100,13 @@ def keep_alive(ip, port):
         time.sleep(10)
 
 
+@celery.task()
+def send_data_to_panel(data):
+    try:
+        client.send(data)
+    except Exception as e:
+        L.exception(e)
+
 
 def day_control(control_id): 
     control = AutoControllers.query.filter_by(id=control_id).first()
@@ -123,7 +129,6 @@ def night_control(control_id):
                                                channel=1).order_by():
             for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
                 relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
-
 
 
 @celery.task(serializer='pickle')
@@ -223,8 +228,8 @@ def network_relay_control_sync(relay_id, is_open):
 
 @celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
-    batch, addr, status = unpack('>B', data[1:2])[0], unpack('>B', data[2:3])[0], data[3:-1]
-    panel = SwitchPanel.query.filter_by(batch_no = batch, addr_no = addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
+    addr, status = unpack('>B', data[2:3])[0], data[3:-1]
+    panel = SwitchPanel.query.filter_by(addr_no=addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
     if panel:
         for i in range(len(status)):
             value = unpack('>B', status[i:i+1])[0] & 0x11 
@@ -260,9 +265,6 @@ def client_recv(ip, port):
             recv_data += delta_data
             if len(recv_data) > 255:
                 raise Exception(f'{len(recv_data)} bytes received, too long')
-            #L.error('++++++++++++++++++++++++++')
-            #L.error(recv_data)
-            #L.error('++++++++++++++++++++++++++')
         except Exception:
             L.info('after 10s later, restart processes pool')
             time.sleep(10)
@@ -431,7 +433,7 @@ def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
     if sensor_name == 'RelayControl':
         network_relay_control_sync.apply_async(args=[relay_id, is_open], queue='relay')
     elif sensor_name == 'LocatorControl':
-        panel = SwitchPanel.query.filter(SwitchPanel.locator.has(zone=zone)).first()
+        panel = SwitchPanel.query.filter(SwitchPanel.locator_id==zone).first()
         if not panel:
             L.error(f'for zone {zone}, no panel can be found!')
             return 
