@@ -229,32 +229,35 @@ def network_relay_control_sync(relay_id, is_open):
 
 @celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
-    addr, status = unpack('>B', data[2:3])[0], data[3:-1]
-    panel = SwitchPanel.query.filter_by(addr_no=addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
-    if panel:
-        for i in range(len(status)):
-            value = unpack('>B', status[i:i+1])[0] & 0x11 
-            if panel.panel_type == 0:
-                switch = Switches.query.filter_by(channel = i+1, switch_panel_id = panel.id).first()
-            else:
-                if i == 2 or i == 3:
-                    continue 
-                else:
+    try:
+        addr, status = unpack('>B', data[2:3])[0], data[3:-1]
+        panel = SwitchPanel.query.filter_by(addr_no=addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
+        if panel:
+            for i in range(len(status)):
+                value = unpack('>B', status[i:i+1])[0] & 0x11 
+                if panel.panel_type == 0:
                     switch = Switches.query.filter_by(channel = i+1, switch_panel_id = panel.id).first()
-            if switch is None or switch.status == value:
-                continue
-            for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
-                network_relay_control_sync.apply_async(args = [relay.id, value], queue = 'relay')
-            # TODO CURRENTLY THIS FEATURE IS NOT AVAILABLE
-            # switch.status = value 
+                else:
+                    if i == 2 or i == 3:
+                        continue 
+                    else:
+                        switch = Switches.query.filter_by(channel = i+1, switch_panel_id = panel.id).first()
+                if switch is None or switch.status == value:
+                    continue
+                for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
+                    network_relay_control_sync.apply_async(args = [relay.id, value], queue = 'relay')
+                # TODO CURRENTLY THIS FEATURE IS NOT AVAILABLE
+                # switch.status = value 
 
-            try:
-                db.session.commit()
-            except:
-                L.exception('db commit failure')
-                db.session.rollback()
-    else:
-        L.error('No cooresponding panel found')
+                try:
+                    db.session.commit()
+                except:
+                    L.exception('db commit failure')
+                    db.session.rollback()
+        else:
+            L.error('No cooresponding panel found')
+    except Exception as e:
+        L.exception(e)
 
 
 def client_recv(ip, port):
