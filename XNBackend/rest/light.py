@@ -1,6 +1,6 @@
 from flask_restful import Resource, reqparse
 from XNBackend.task.sensor.task import tasks_route, send_data_to_panel
-from XNBackend.models import SwitchPanel, Switches
+from XNBackend.models import SwitchPanel, Switches, db
 from ..utils import query_panel_status
 
 light_parser = reqparse.RequestParser()
@@ -29,7 +29,8 @@ class LightControl(Resource):
         sw = room_switches.filter(Switches.channel == channel).first()
         sw.status = is_open
         tasks_route.delay('LocatorControl', channel, is_open, zone=room_no)
-        sw.save()
+        db.session.add(sw)
+        db.session.commit()
         return ('successful update status of light', 200)
         
         # ================================================================
