@@ -246,8 +246,7 @@ def handle_switch_signal(data, ip):
                     continue
                 for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
                     network_relay_control_sync.apply_async(args = [relay.id, value], queue = 'relay')
-                # TODO CURRENTLY THIS FEATURE IS NOT AVAILABLE
-                # switch.status = value 
+                switch.status = value 
 
                 try:
                     db.session.commit()
