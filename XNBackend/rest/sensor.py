@@ -81,7 +81,9 @@ class AirCondition(Resource):
             import pprint
             pprint.pprint(kwarg_control)
             print(kwarg_control)
-            # send_cmd_to_air_condition.apply_async(args=[a.device_index_code], kwargs=kwarg_control)
+            send_cmd_to_air_condition.apply_async(args=[a.device_index_code],
+                                                  kwargs=kwarg_control,
+                                                  queue="general")
         return {'errMsg': 'ok'}
 
 

@@ -136,14 +136,14 @@ class Device(Resource):
         total_fire_detectors = 37
         # total_fire_detectors = cal_total(total_floor, 'fire_alarm', 'detectors')
         # total_fire_alarm = cal_total(total_floor, 'fire_alarm', 'alarms')
-        total_fire_alarm = 'NA'
+        total_fire_alarm = 0
 
         return_data = {
             "total": {
                 "fire_alarm": {
                     "detectors": total_fire_detectors,
                     "alarms": total_fire_alarm,
-                    "running": 'NA'
+                    "running": 0
                 },
                 "ir_sensors": {
                     "rooms": cal_total(total_floor, 'ir_sensors', 'rooms'),
