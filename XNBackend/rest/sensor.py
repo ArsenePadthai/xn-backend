@@ -1,9 +1,19 @@
 from flask_restful import Resource, reqparse
-from XNBackend.models import IRSensors, TrackingDevices, LuxSensors, FireAlarmSensors, Elevators, Relay
+from XNBackend.models import IRSensors, TrackingDevices, \
+    LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner
+from XNBackend.api_client.air_conditioner import set_ac_data
+from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 
 
 floor_parser = reqparse.RequestParser()
 floor_parser.add_argument('floor', required=True, type=int, help='require floor number')
+
+ac_patch_parser = reqparse.RequestParser()
+ac_patch_parser.add_argument('room_no', required=True, type=str, help='require room number')
+ac_patch_parser.add_argument('run', required=False, type=bool)
+ac_patch_parser.add_argument('mode', required=False, type=int)
+ac_patch_parser.add_argument('temperature', required=False, type=int)
+ac_patch_parser.add_argument('fanSpeed', required=False, type=int)
 
 
 def check_ir(floor):
@@ -41,6 +51,38 @@ class AirCondition(Resource):
             "full_running": 16,
             "detail": return_room_status(floor, ac_status)
         }
+
+    def patch(self):
+        args = ac_patch_parser.parse_args()
+        room_no = args.get('room_no')
+        run = args.get('run')
+        mode = args.get('mode')
+        temperature = args.get('temperature')
+        fan_speed = args.get('fanSpeed')
+        kwarg_control = {}
+
+        air_conditions = AirConditioner.query.filter(AirConditioner.locator_id == room_no).all()
+
+        if not air_conditions:
+            return {"errMsg": f'Can not find air condition for room {room_no}'}
+        if run is not None:
+            kwarg_control['StartStopStatus'] = 1 if run else 0
+        if mode:
+            kwarg_control['ModeCmd'] = mode
+        if temperature:
+            kwarg_control['TempSet'] = temperature
+        if fan_speed:
+            kwarg_control['FanSpeedSet'] = fan_speed
+
+        if not kwarg_control:
+            return {"errMsg": f'no parameter is found for set air condition'}
+
+        for a in air_conditions:
+            import pprint
+            pprint.pprint(kwarg_control)
+            print(kwarg_control)
+            # send_cmd_to_air_condition.apply_async(args=[a.device_index_code], kwargs=kwarg_control)
+        return {'errMsg': 'ok'}
 
 
 class FireDetector(Resource):

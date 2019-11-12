@@ -12,7 +12,7 @@ from XNBackend.parser.protocol import data_parse
 from XNBackend.task import celery, logger
 from XNBackend.models.models import db, Locators, IRSensorStatus, IRSensors, \
     AQIValues, AQISensors, LuxValues, LuxSensors, Switches, SwitchPanel, \
-    Relay, RelayStatus, TcpConfig, AutoControllers
+    Relay, TcpConfig, AutoControllers
 
 
 L = logger.getChild(__name__)
@@ -182,31 +182,32 @@ class panel(Enum):
 
 @celery.task(serializer='pickle')
 def auto_change(relay_id, is_open):
-    try:
-        sensor = Relay.query.filter_by(id=relay_id).first()
-        if sensor.switch.channel == panel.mainLight or sensor.switch.channel == panel.auxLight and sensor.switch.switch_panel.panel_type == panel.fourType:
-            control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
-            control.if_auto = 0
-        elif sensor.switch.channel == panel.auto or sensor.switch.channel == panel.doubleAuto and sensor.switch.switch_panel.panel_type == panel.doubleType:
-            control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
-            if is_open:
-                L.info('Start auto control')
-                ir_query.apply_async(args = [control.id, False], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
-            control.if_auto = is_open
-    except Exception as e:
-        L.error(e)
-        pass
-    else:
-        try:
-            record = RelayStatus(relay_id=sensor.id, value=is_open)
-            db.session.add(record)
-            db.session.flush()
-            sensor.latest_record_id = record.id
-            db.session.commit()
-            L.info('Record relay status successfully')
-        except:
-            L.exception('db commit failure')
-            db.session.rollback()
+    pass
+    # try:
+    #     sensor = Relay.query.filter_by(id=relay_id).first()
+    #     if sensor.switch.channel == panel.mainLight or sensor.switch.channel == panel.auxLight and sensor.switch.switch_panel.panel_type == panel.fourType:
+    #         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
+    #         control.if_auto = 0
+    #     elif sensor.switch.channel == panel.auto or sensor.switch.channel == panel.doubleAuto and sensor.switch.switch_panel.panel_type == panel.doubleType:
+    #         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
+    #         if is_open:
+    #             L.info('Start auto control')
+    #             ir_query.apply_async(args = [control.id, False], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
+    #         control.if_auto = is_open
+    # except Exception as e:
+    #     L.error(e)
+    #     pass
+    # else:
+    #     try:
+    #         record = RelayStatus(relay_id=sensor.id, value=is_open)
+    #         db.session.add(record)
+    #         db.session.flush()
+    #         sensor.latest_record_id = record.id
+    #         db.session.commit()
+    #         L.info('Record relay status successfully')
+    #     except:
+    #         L.exception('db commit failure')
+    #         db.session.rollback()
 
 
 @celery.task(serializer='pickle')
@@ -229,34 +230,31 @@ def network_relay_control_sync(relay_id, is_open):
 
 @celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
-    try:
-        addr, status = unpack('>B', data[2:3])[0], data[3:-1]
-        panel = SwitchPanel.query.filter_by(addr_no=addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
-        if panel:
-            for i in range(len(status)):
-                value = unpack('>B', status[i:i+1])[0] & 0x11 
-                if panel.panel_type == 0:
-                    switch = Switches.query.filter_by(channel = i+1, switch_panel_id = panel.id).first()
-                else:
-                    if i == 2 or i == 3:
-                        continue 
-                    else:
-                        switch = Switches.query.filter_by(channel = i+1, switch_panel_id = panel.id).first()
-                if switch is None or switch.status == value:
+    addr, status = unpack('>B', data[2:3])[0], data[3:-1]
+    panel = SwitchPanel.query.filter_by(addr_no=addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
+    if panel:
+        for i in range(len(status)):
+            value = unpack('>B', status[i:i+1])[0] & 0x11 
+            if panel.panel_type == 0:
+                switch = Switches.query.filter_by(channel=i+1, switch_panel_id=panel.id).first()
+            else:
+                if i == 2 or i == 3:
                     continue
-                for relay in Relay.query.filter_by(switch_id = switch.id).order_by():
-                    network_relay_control_sync.apply_async(args = [relay.id, value], queue = 'relay')
-                switch.status = value 
+                else:
+                    switch = Switches.query.filter_by(channel=i+1, switch_panel_id=panel.id).first()
+            if switch is None or switch.status == value:
+                continue
+            for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
+                network_relay_control_sync.apply_async(args=[relay.id, value], queue='relay')
+            switch.status = value
 
-                try:
-                    db.session.commit()
-                except:
-                    L.exception('db commit failure')
-                    db.session.rollback()
-        else:
-            L.error('No cooresponding panel found')
-    except Exception as e:
-        L.exception(e)
+            try:
+                db.session.commit()
+            except:
+                L.exception('db commit failure')
+                db.session.rollback()
+    else:
+        L.error('No cooresponding panel found')
 
 
 def client_recv(ip, port):
@@ -358,38 +356,38 @@ def relay_panel_control(relay_id, is_open):
 
 
 
-@celery.task(bind=True, serializer='pickle')
-def relay_query(self, query_data, id):
-    sensor = Relay.query.filter_by(id=id).first()
-    L.info("Query the status of relay, send '%s' to the server", query_data)
-    try:
-        client_temp = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        client_temp.connect((sensor.tcp_config.ip, sensor.tcp_config.port))
-        client_temp.send(query_data)
-        data_byte = client_temp.recv(1024)
-    except Exception as e:
-        L.exception('relay_query error')
-        L.error(e)
-    try:
-        client_temp.close()
-    except Exception:
-        pass
+# @celery.task(bind=True, serializer='pickle')
+# def relay_query(self, query_data, id):
+#     sensor = Relay.query.filter_by(id=id).first()
+#     L.info("Query the status of relay, send '%s' to the server", query_data)
+#     try:
+#         client_temp = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+#         client_temp.connect((sensor.tcp_config.ip, sensor.tcp_config.port))
+#         client_temp.send(query_data)
+#         data_byte = client_temp.recv(1024)
+#     except Exception as e:
+#         L.exception('relay_query error')
+#         L.error(e)
+#     try:
+#         client_temp.close()
+#     except Exception:
+#         pass
 
-    if len(data_byte) == 8 and data_byte[0] == 34: 
-        data = data_parse(data_byte)
-    else:
-        pass 
-    status = ((data.status & 1 << sensor.channel-1) != 0)
-    relay_panel_control.apply_async(args=[sensor.id, status], queue='relay')
-    record = RelayStatus(relay_id=sensor.id, value=status) 
-    db.session.add(record)
-    db.session.flush()
-    sensor.latest_record_id = record.id
-    try:
-        db.session.commit()
-    except:
-        L.exception('db commit failure')
-        db.session.rollback()
+#     if len(data_byte) == 8 and data_byte[0] == 34: 
+#         data = data_parse(data_byte)
+#     else:
+#         pass 
+#     status = ((data.status & 1 << sensor.channel-1) != 0)
+#     relay_panel_control.apply_async(args=[sensor.id, status], queue='relay')
+#     record = RelayStatus(relay_id=sensor.id, value=status) 
+#     db.session.add(record)
+#     db.session.flush()
+#     sensor.latest_record_id = record.id
+#     try:
+#         db.session.commit()
+#     except:
+#         L.exception('db commit failure')
+#         db.session.rollback()
 
 
 
@@ -440,16 +438,16 @@ def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
         panel = SwitchPanel.query.filter(SwitchPanel.locator_id==zone).first()
         if not panel:
             L.error(f'for zone {zone}, no panel can be found!')
-            return 
+            return
         switch = Switches.query.filter_by(switch_panel_id=panel.id, channel=channel).first()
         for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
             network_relay_control_sync.apply_async(args=[relay.id, is_open], queue='relay')
             L.info(f'remote control light-delay {relay.id}')
-    else:
-        for data, sensor in data_generate(sensor_name):
-            if sensor_name == 'Relay':
-                relay_query.apply_async(args=[data, sensor.id], queue='relay')
-            else:
-                sensor_query.apply_async(args=[sensor_name, data, sensor.id], queue=sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
+    # else:
+    #     for data, sensor in data_generate(sensor_name):
+    #         if sensor_name == 'Relay':
+    #             relay_query.apply_async(args=[data, sensor.id], queue='relay')
+    #         else:
+    #             sensor_query.apply_async(args=[sensor_name, data, sensor.id], queue=sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
 
-    L.info('data stored')
+    # L.info('data stored')

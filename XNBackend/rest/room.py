@@ -1,5 +1,5 @@
 from flask_restful import Resource, reqparse
-from XNBackend.models import IRSensors, TrackingDevices, Relay, S3FC20, Switches
+from XNBackend.models import IRSensors, TrackingDevices, Relay, S3FC20, Switches, AirConditioner
 
 
 room_parser = reqparse.RequestParser()
@@ -9,6 +9,7 @@ room_parser.add_argument('room', required=True, type=int, help='require room num
 class Room(Resource):
     def get(self):
         room_number = room_parser.parse_args().get('room')
+        errMsg = []
         SWITCH_FAN = 3
         SWITCH_AUTO = 4
         S3FC20_LIGHT = 0
@@ -17,8 +18,18 @@ class Room(Resource):
         ir_sensor = IRSensors.query.filter(IRSensors.locator_body.has(zone=room_number))
         tracking_device = TrackingDevices.query.filter(TrackingDevices.locator_body.has(zone=room_number))
 
-        # ac = S3FC20.query.filter(S3FC20.locator.has(zone=room_number)).filter(S3FC20.measure_type == S3FC20_AC)
-        ac_value = False
+        ac_info = []
+        air_conditions = AirConditioner.query.filter(AirConditioner.locator_id == room_number).all()
+        if not air_conditions:
+            errMsg.append(f'{room_number} has no air condition')
+        else:
+            for a in air_conditions:
+                ac_info.append({"device_index_code": a.device_index_code,
+                                "ac_on": True if a.ac_on else False,
+                                "temperature": a.temperature,
+                                "if_online": a.if_online,
+                                "set_mode": a.desired_mode,
+                                "set_speed": a.desired_speed})
 
         ir_value = False
         for i in ir_sensor.all():
@@ -33,9 +44,10 @@ class Room(Resource):
         main_light_value = main_switch.status if main_switch else 0
         aux_light_value = aux_switch.status if aux_switch else 0
         return {
-            "ac_on": ac_value,
+            "ac": ac_info,
             "main_light": main_light_value,
             "aux_light": aux_light_value,
             "acs_lock": acs_lock_value,
-            "ir_sensor": ir_value
+            "ir_sensor": ir_value,
+            "errMsg": 'ok' if not errMsg else ','.join(errMsg)
         }

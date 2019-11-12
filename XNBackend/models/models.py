@@ -1,11 +1,15 @@
 # -*- coding:utf-8 -*-
 from .base import db
+import logging
 
 from sqlalchemy import ForeignKey, Unicode, BOOLEAN, TIMESTAMP, String, \
     SmallInteger, Integer, Float, Time
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from flask_bcrypt import generate_password_hash, check_password_hash
+from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
+
+L = logging.getLogger(__name__)
 
 SHORT_LEN = 30
 MEDIUM_LEN = 50
@@ -92,6 +96,7 @@ class TcpConfig(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     ip = db.Column(String(MEDIUM_LEN))
     port = db.Column(Integer)
+    desc = db.Column(String(100))
 
 
 class TrackingDevices(db.Model, TimeStampMixin):
@@ -180,7 +185,8 @@ class S3FC20(db.Model, TimeStampMixin):
     box = relationship('MantunciBox')
     latest_record_id = db.Column(Integer, ForeignKey('s3_fc20_records.id',
                                                      ondelete='SET NULL'))
-    latest_record = relationship('S3FC20Records', foreign_keys=[latest_record_id])
+    latest_record = relationship(
+        'S3FC20Records', foreign_keys=[latest_record_id])
     # 0 means light, 1 means ac, 2 means power socket
     measure_type = db.Column(SmallInteger)
     locator_id = db.Column(Unicode(length=MEDIUM_LEN),
@@ -279,7 +285,8 @@ class EnergyConsumeByHour(db.Model, TimeStampMixin, CarbonMixin):
     s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
                                                ondelete='SET NULL'))
     electricity = db.Column(Float)
-    box = relationship('MantunciBox', foreign_keys=[box_id], backref='hour_consume')
+    box = relationship('MantunciBox', foreign_keys=[
+                       box_id], backref='hour_consume')
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
@@ -292,7 +299,8 @@ class EnergyConsumeDaily(db.Model, TimeStampMixin, CarbonMixin):
     s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
                                                ondelete='SET NULL'))
     electricity = db.Column(Float)
-    box = relationship('MantunciBox', foreign_keys=[box_id], backref='daily_consume')
+    box = relationship('MantunciBox', foreign_keys=[
+                       box_id], backref='daily_consume')
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
@@ -303,7 +311,8 @@ class EnegyConsumeMonthly(db.Model, TimeStampMixin):
     s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
                                                ondelete='SET NULL'))
     electricity = db.Column(Float)
-    box = relationship('MantunciBox', foreign_keys=[box_id], backref='monthly_consume')
+    box = relationship('MantunciBox', foreign_keys=[
+                       box_id], backref='monthly_consume')
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
@@ -367,7 +376,6 @@ class AQISensors(db.Model, TimeStampMixin):
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-
 
 
 class AQIEventCount(db.Model):
@@ -443,7 +451,7 @@ class SwitchPanel(db.Model, TimeStampMixin):
     batch_no = db.Column(db.Integer)
     addr_no = db.Column(db.Integer)
     desc = db.Column(Unicode(length=LONG_LEN))
-    # when panel_type is 0 means four control, when panel_type is 1 means double control 
+    # when panel_type is 0 means four control, when panel_type is 1 means double control
     panel_type = db.Column(SmallInteger)
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
@@ -463,6 +471,7 @@ class Switches(db.Model, TimeStampMixin):
                                            ondelete='SET NULL'))
     status = db.Column(SmallInteger)
     switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id])
+    desc = db.Column(String(100))
 
     @property
     def four_control_type_readable(self):
@@ -483,27 +492,14 @@ class Switches(db.Model, TimeStampMixin):
             return u'auto'
 
 
-class RelayStatus(db.Model, TimeStampMixin):
-    __tablename__ = 'relay_status'
-    id = db.Column(Integer, primary_key=True)
-    relay_id = db.Column(Integer, ForeignKey('relay.id',
-                                              ondelete='CASCADE'))
-    # 0 means off, 1 means on
-    value = db.Column(SmallInteger)
-
-
 class Relay(db.Model, TimeStampMixin):
     __tablename__ = 'relay'
     id = db.Column(Integer, primary_key=True)
     device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    addr = db.Column(Integer) # protocol needs addr parameter
+    addr = db.Column(Integer)
     channel = db.Column(Integer)
-    latest_record_id = db.Column(Integer,
-                                 ForeignKey('relay_status.id',
-                                            ondelete='SET NULL'))
-    switch_id = db.Column(Integer,
-                                ForeignKey('switches.id',
-                                           ondelete='SET NULL'))
+    switch_id = db.Column(Integer, ForeignKey('switches.id',
+                                              ondelete='SET NULL'))
     switch = relationship('Switches', foreign_keys=[switch_id])
     locator_id = db.Column(Unicode(length=MEDIUM_LEN),
                            ForeignKey(Locators.internal_code,
@@ -512,7 +508,7 @@ class Relay(db.Model, TimeStampMixin):
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-    latest_record = relationship('RelayStatus', foreign_keys=[latest_record_id])
+    IPAddr = db.Column(String(100))
 
 
 class ElevatorStatus(db.Model, TimeStampMixin):
@@ -562,26 +558,54 @@ class AutoControllers(db.Model, TimeStampMixin):
                                            ondelete='SET NULL'))
     ir_sensor = relationship('IRSensors', foreign_keys=[ir_sensor_id])
     lux_sensor_id = db.Column(Integer,
-                                ForeignKey('lux_sensors.id',
-                                           ondelete='SET NULL'))
+                              ForeignKey('lux_sensors.id',
+                                         ondelete='SET NULL'))
     lux_sensor = relationship('LuxSensors', foreign_keys=[lux_sensor_id])
 
 
 class AirConditioner(db.Model, TimeStampMixin):
     __tablename__ = 'air_conditioner'
-    id = db.Column(Integer, primary_key=True)
-    desired_speed = db.Column(Float)
-    if_online = db.Column(BOOLEAN)
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), primary_key=True)
+    desired_speed = db.Column(Integer)
+    if_online = db.Column(SmallInteger)
     desired_mode = db.Column(SmallInteger)
-    temperature = db.Column(Float)
-    ac_on = db.Column(BOOLEAN)
-    desired_temperature = db.Column(Float)
+    temperature = db.Column(Integer)
+    ac_on = db.Column(SmallInteger)
+    desired_temperature = db.Column(SmallInteger)
     locator_id = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
                                                                   ondelete='SET NULL'))
-    #hum = db.Column(Float)
-    #auto_controller = relationship('AutoControllers',
-    #                               foreign_keys=[auto_controller_id])
-    # auto_controller_id = db.Column(Integer,
-    #                                ForeignKey('auto_controllers.id',
-    #                                           ondelete='SET NULL'))
+    locator = relationship('Locators')
 
+    def apply_values(self, data):
+        assert self.device_index_code == data.get('deviceCode')
+        if data.get('errCode', 0) != 0:
+            reason = data.get('errMsg')
+            L.info(f'Failed to get values of ac reason: {reason}')
+            return
+
+        online = data.get('online')
+        if not online:
+            self.if_online = 0
+            return
+        else:
+            self.if_online = 1
+
+        for d in data.get('variantDatas'):
+            if d['code'] == 'FanSpeedSet':
+                self.desired_speed = int(d['value'])
+                continue
+            if d['code'] == 'ModeCmd':
+                self.desired_mode = int(d['value'])
+                continue
+            if d['code'] == 'RoomTemp':
+                self.temperature = int(d['value'])
+                continue
+            if d['code'] == 'StartStopStatus':
+                self.ac_on = int(d['value'])
+                continue
+            if d['code'] == 'TempSet':
+                self.desired_temperature = int(d['value'])
+
+    def update_values(self):
+        ret = get_ac_data([self.device_index_code])
+        self.apply_values(ret['data'][0])

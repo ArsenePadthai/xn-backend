@@ -37,6 +37,7 @@ def get_ac_data(device_codes: list,
         return json.loads(ret.content)
     except Exception as e:
         L.exception(e)
+        return {"errMsg": 'failed'}
 
 
 def set_ac_data(device_code: str, **kwargs):
@@ -50,12 +51,15 @@ def set_ac_data(device_code: str, **kwargs):
     try:
         ret = requests.post(url, json=data)
         content = json.loads(ret.content)
-        if content.get('errCode') != '0':
-            L.error(content.get('errMsg'))
-        # else:
-        #     result = content.get('writeResult')
-        #     for r in result:
-        #         if result[r] != 0:
-        #             L.error(f'update {r} failed')
+        errMsg = content.get('errMsg')
+        if errMsg != 'ok':
+            errCode = content.get('errCode')
+            L.error(f'Failed to set parameters. Reason: {errMsg}, Code: {errCode}')
+            return {"errMsg": errMsg,
+                    "errCode": errCode}
+        else:
+            return {"errMsg": 'ok',
+                    "writeResult": content.get('writeResult')}
     except Exception as e:
         L.exception(e)
+        return {"errMsg": e}
