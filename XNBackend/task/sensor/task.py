@@ -100,15 +100,6 @@ def keep_alive(ip, port):
         time.sleep(10)
 
 
-@celery.task()
-def send_data_to_panel(addr, four_bits):
-    data = bytes.fromhex(f'DA 06 {addr} 02') + bytes(four_bits)
-    try:
-        client.send(data)
-    except Exception as e:
-        L.exception(e)
-
-
 def day_control(control_id): 
     control = AutoControllers.query.filter_by(id=control_id).first()
     for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id,
@@ -435,7 +426,7 @@ def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
     if sensor_name == 'RelayControl':
         network_relay_control_sync.apply_async(args=[relay_id, is_open], queue='relay')
     elif sensor_name == 'LocatorControl':
-        panel = SwitchPanel.query.filter(SwitchPanel.locator_id==zone).first()
+        panel = SwitchPanel.query.filter(SwitchPanel.locator_id == zone).first()
         if not panel:
             L.error(f'for zone {zone}, no panel can be found!')
             return
