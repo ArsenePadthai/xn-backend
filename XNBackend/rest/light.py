@@ -48,8 +48,8 @@ class LightControl(Resource):
                 # two switches
                 channel = 2
                 four_bits = [s_1, is_open, s_3, s_4]
-
-        cmd = bytes.fromhex(f'DA 06 {int(sp.addr_no)} 02') + bytes(four_bits) + bytes.fromhex('EE')
+        addr_hex = hex(sp.addr_no)[2:].rjust(2, '0')
+        cmd = bytes.fromhex(f'DA 06 {addr_hex} 02') + bytes(four_bits) + bytes.fromhex('EE')
         L.debug(cmd)
         try:
             client.send(cmd)
@@ -66,5 +66,6 @@ class LightControl(Resource):
 
         tasks_route.delay('LocatorControl', channel, is_open, zone=room_no)
         tasks_route.apply_async(args=['LocatorControl', channel, is_open],
-                                kwargs={'zone': room_no})
+                                kwargs={'zone': room_no},
+                                queue='general')
         return {'errMsg': 'ok'}
