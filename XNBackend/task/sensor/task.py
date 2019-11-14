@@ -160,7 +160,6 @@ def ir_query(control_id, auto, is_day=None):
             night_control(control.id)
 
 
-
 class panel(Enum):
     fourType = 0
     doubleType = 1 
