@@ -576,6 +576,28 @@ class AirConditioner(db.Model, TimeStampMixin):
                                                                   ondelete='SET NULL'))
     locator = relationship('Locators')
 
+    @staticmethod
+    def extract_data(ac_data):
+        data_dict = dict()
+        data_dict['device_index_code'] = ac_data['deviceCode']
+        data_dict['if_online'] = ac_data['online']
+        for d in ac_data['variantDatas']:
+            if d['code'] == 'FanSpeedSet':
+                data_dict['set_speed'] = int(d['value'])
+                continue
+            if d['code'] == 'ModeCmd':
+                data_dict['set_mode'] = int(d['value'])
+                continue
+            if d['code'] == 'RoomTemp':
+                data_dict['temperature'] = int(d['value'])
+                continue
+            if d['code'] == 'StartStopStatus':
+                data_dict['ac_on'] = int(d['value'])
+                continue
+            if d['code'] == 'TempSet':
+                data_dict['set_temperature'] = int(d['value'])
+        return data_dict
+
     def apply_values(self, data):
         assert self.device_index_code == data.get('deviceCode')
         if data.get('errCode', 0) != 0:
@@ -591,20 +613,12 @@ class AirConditioner(db.Model, TimeStampMixin):
             self.if_online = 1
 
         for d in data.get('variantDatas'):
-            if d['code'] == 'FanSpeedSet':
-                self.desired_speed = int(d['value'])
-                continue
-            if d['code'] == 'ModeCmd':
-                self.desired_mode = int(d['value'])
-                continue
-            if d['code'] == 'RoomTemp':
-                self.temperature = int(d['value'])
-                continue
-            if d['code'] == 'StartStopStatus':
-                self.ac_on = int(d['value'])
-                continue
-            if d['code'] == 'TempSet':
-                self.desired_temperature = int(d['value'])
+            data_in_dict = self.extract_data(d)
+            self.desired_speed = data_in_dict['set_speed']
+            self.desired_mode = data_in_dict['set_mode']
+            self.temperature = data_in_dict['temperature']
+            self.ac_on = data_in_dict['ac_on']
+            self.desired_temperature = data_in_dict['set_temperature']
 
     def update_values(self):
         ret = get_ac_data([self.device_index_code])

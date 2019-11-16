@@ -43,7 +43,7 @@ ip_list = [
 @systemd.command()
 @click.option(
     '--code',
-    type=click.Choice(['start', 'stop']),
+    type=click.Choice(['start', 'stop', 'restart', 'enable']),
     required=True,
     help='start or stop celery worker'
 )

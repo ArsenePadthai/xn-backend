@@ -9,11 +9,12 @@ floor_parser = reqparse.RequestParser()
 floor_parser.add_argument('floor', required=True, type=int, help='require floor number')
 
 ac_patch_parser = reqparse.RequestParser()
-ac_patch_parser.add_argument('room_no', required=True, type=str, help='require room number')
-ac_patch_parser.add_argument('run', required=False, type=bool)
-ac_patch_parser.add_argument('mode', required=False, type=int)
+ac_patch_parser.add_argument('device_index_code', required=True, type=str, 
+                             help='require device_index_code')
+ac_patch_parser.add_argument('ac_on', required=False, type=bool)
+ac_patch_parser.add_argument('set_mode', required=False, type=int)
 ac_patch_parser.add_argument('temperature', required=False, type=int)
-ac_patch_parser.add_argument('fanSpeed', required=False, type=int)
+ac_patch_parser.add_argument('set_speed', required=False, type=int)
 
 
 def check_ir(floor):
@@ -54,17 +55,13 @@ class AirCondition(Resource):
 
     def patch(self):
         args = ac_patch_parser.parse_args()
-        room_no = args.get('room_no')
-        run = args.get('run')
-        mode = args.get('mode')
+        device_index_code = args.get('device_index_code')
+        run = args.get('ac_on')
+        mode = args.get('set_mode')
         temperature = args.get('temperature')
-        fan_speed = args.get('fanSpeed')
+        fan_speed = args.get('set_speed')
         kwarg_control = {}
 
-        air_conditions = AirConditioner.query.filter(AirConditioner.locator_id == room_no).all()
-
-        if not air_conditions:
-            return {"errMsg": f'Can not find air condition for room {room_no}'}
         if run is not None:
             kwarg_control['StartStopStatus'] = 1 if run else 0
         if mode:
@@ -77,13 +74,9 @@ class AirCondition(Resource):
         if not kwarg_control:
             return {"errMsg": f'no parameter is found for set air condition'}
 
-        for a in air_conditions:
-            import pprint
-            pprint.pprint(kwarg_control)
-            print(kwarg_control)
-            send_cmd_to_air_condition.apply_async(args=[a.device_index_code],
-                                                  kwargs=kwarg_control,
-                                                  queue="general")
+        send_cmd_to_air_condition.apply_async(args=[device_index_code],
+                                              kwargs=kwarg_control,
+                                              queue="general")
         return {'errMsg': 'ok'}
 
 

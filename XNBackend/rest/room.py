@@ -1,5 +1,6 @@
 from flask_restful import Resource, reqparse
-from XNBackend.models import IRSensors, TrackingDevices, Relay, S3FC20, Switches, AirConditioner
+from XNBackend.models import IRSensors, TrackingDevices, Switches, AirConditioner
+from XNBackend.api_client.air_conditioner import get_ac_data
 
 
 room_parser = reqparse.RequestParser()
@@ -10,11 +11,6 @@ class Room(Resource):
     def get(self):
         room_number = room_parser.parse_args().get('room')
         errMsg = []
-        SWITCH_FAN = 3
-        SWITCH_AUTO = 4
-        S3FC20_LIGHT = 0
-        S3FC20_AC = 1
-        S3FC20_SOCKET=2
         ir_sensor = IRSensors.query.filter(IRSensors.locator_body.has(zone=room_number))
         tracking_device = TrackingDevices.query.filter(TrackingDevices.locator_body.has(zone=room_number))
 
@@ -23,13 +19,13 @@ class Room(Resource):
         if not air_conditions:
             errMsg.append(f'{room_number} has no air condition')
         else:
-            for a in air_conditions:
-                ac_info.append({"device_index_code": a.device_index_code,
-                                "ac_on": True if a.ac_on else False,
-                                "temperature": a.temperature,
-                                "if_online": a.if_online,
-                                "set_mode": a.desired_mode,
-                                "set_speed": a.desired_speed})
+            ac_index_codes = [a.device_index_code for a in air_conditions]
+            ret = get_ac_data(ac_index_codes)
+            if ret.get('errMsg') == 'ok':
+                ac_datas = ret.get('data')
+                for each_ac in ac_datas:
+                    each_ac_dict = AirConditioner.extract_data(each_ac)
+                    ac_info.append(each_ac_dict)
 
         ir_value = False
         for i in ir_sensor.all():
