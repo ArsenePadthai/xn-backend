@@ -605,20 +605,13 @@ class AirConditioner(db.Model, TimeStampMixin):
             L.info(f'Failed to get values of ac reason: {reason}')
             return
 
-        online = data.get('online')
-        if not online:
-            self.if_online = 0
-            return
-        else:
-            self.if_online = 1
-
-        for d in data.get('variantDatas'):
-            data_in_dict = self.extract_data(d)
-            self.desired_speed = data_in_dict['set_speed']
-            self.desired_mode = data_in_dict['set_mode']
-            self.temperature = data_in_dict['temperature']
-            self.ac_on = data_in_dict['ac_on']
-            self.desired_temperature = data_in_dict['set_temperature']
+        data_in_dict = self.extract_data(data)
+        self.if_online = 1 if data_in_dict['if_online'] else 0
+        self.desired_speed = data_in_dict.get('set_speed')
+        self.desired_mode = data_in_dict.get('set_mode')
+        self.temperature = data_in_dict.get('temperature')
+        self.ac_on = data_in_dict.get('ac_on')
+        self.desired_temperature = data_in_dict.get('set_temperature')
 
     def update_values(self):
         ret = get_ac_data([self.device_index_code])
