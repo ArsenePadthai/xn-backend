@@ -592,7 +592,7 @@ class AirConditioner(db.Model, TimeStampMixin):
                 data_dict['temperature'] = int(d['value'])
                 continue
             if d['code'] == 'StartStopStatus':
-                data_dict['ac_on'] = int(d['value'])
+                data_dict['ac_on'] = True if int(d['value']) else False
                 continue
             if d['code'] == 'TempSet':
                 data_dict['set_temperature'] = int(d['value'])
