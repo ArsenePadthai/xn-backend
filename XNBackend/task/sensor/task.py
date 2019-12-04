@@ -230,14 +230,25 @@ def network_relay_control_sync(relay_id, is_open):
 
 
 @celery.task(serializer='pickle')
-def handle_ir_signal(data):
-    pass
+def handle_ir_signal(data, ip):
+    addr = data[2]
+    status = data[-2]
+    ir = IRSensors.query.filter(IRSensors.addr_no == addr
+                                ).filter(IRSensors.tcp_config.has(ip=ip)).first()
+    if ir:
+        ir.status = status
+        try:
+            db.session.commit()
+        except Exception as e:
+            L.exception(e)
+            db.session.rollback()
 
 
 @celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
     addr, status = unpack('>B', data[2:3])[0], data[3:-1]
-    panel = SwitchPanel.query.filter_by(addr_no=addr).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
+    panel = SwitchPanel.query.filter_by(addr_no=addr
+                                        ).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
     if panel:
         for i in range(len(status)):
             value = unpack('>B', status[i:i+1])[0] & 0x11 
@@ -287,8 +298,6 @@ def client_recv(ip, port, use_for):
             if use_for == 'panel':
                 handle_switch_signal.apply_async(args=[data, ip], queue=ip+':'+str(port))
             else:
-                L.error('xxxxxxxx')
-                L.error(data)
                 handle_ir_signal.apply_async(args=[data, ip], queue=ip+':'+str(port))
 
 
@@ -315,7 +324,7 @@ def configure_workers(sender=None, **kwargs):
             thread.start()
         else:
             tcp_client(addr[0], int(addr[1]), block=False)
-            thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), 'sensor'))
+            thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), 'panel'))
             thread_ka = Thread(target=keep_alive, args=(addr[0], int(addr[1])))
             thread.daemon = True
             thread_ka.daemon = True
