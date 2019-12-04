@@ -17,18 +17,33 @@ ac_patch_parser.add_argument('set_speed', required=False, type=int)
 
 
 def check_ir(floor):
+    floor_map = {
+        3: range(301, 325),
+        4: range(401, 428),
+        5: range(501, 523),
+        6: range(601, 630),
+        7: range(701, 730),
+        9: range(901, 905),
+    }
     sensors = IRSensors.query.filter(IRSensors.locator_body.has(floor=floor)).all()
-    ROOM_NUMBER = [24, 24, 24, 24, 24, 24, 24, 24]
-    status = [False] * ROOM_NUMBER[floor]  # floor - 1
+    room_range = floor_map[floor]
+    status_dict = dict()
+    for room in room_range:
+        status_dict[room] = -1
+
     occupied = 0
     empty = 0
+    error = 0
     for i in sensors:
-        if i.latest_record and i.latest_record.status:
+        if i.status == 1:
             occupied += 1
-            status[i.locator_body.zone - floor * 100 - 1] = True
-        else:
+            status_dict[i.locator_body.zone] = 1
+        elif i.status == 0:
             empty += 1
-    return occupied, empty, status
+            status_dict[i.locator_body.zone] = 0
+        elif i.status is None:
+            error += 1
+    return occupied, empty, error, status_dict
 
 
 def return_room_status(floor, status):
@@ -43,7 +58,6 @@ class AirCondition(Resource):
         floor = str(floor_parser.parse_args().get('floor'))
         ac_query = AirConditioner.query.filter(AirConditioner.locator_id == floor)
         total = ac_query.count()
-        # occupied, empty, status = check_ir(floor)
         ac_status = [True, True, False] * 8
 
         return {
@@ -98,13 +112,13 @@ class FireDetector(Resource):
 class IRSensor(Resource):
     def get(self):
         floor = floor_parser.parse_args().get('floor')
-        occupied, empty, status = check_ir(floor)
+        occupied, empty, error, status = check_ir(floor)
 
         return {
             "total": occupied + empty,
             "empty": empty,
             "occupied": occupied,
-            "detail": return_room_status(floor, status)
+            "detail": status
         }
 
 

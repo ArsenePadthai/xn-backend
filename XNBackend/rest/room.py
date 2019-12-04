@@ -27,10 +27,12 @@ class Room(Resource):
                     each_ac_dict = AirConditioner.extract_data(each_ac)
                     ac_info.append(each_ac_dict)
 
-        ir_value = False
-        for i in ir_sensor.all():
-            if i.latest_record and i.latest_record.value:
-                ir_value = True
+        ir_value = -1
+        for i in ir_sensor:
+            if i.status == 0:
+                ir_value = 0
+            elif i.status == 1:
+                ir_value = 1
 
         acs_lock_value = True
 

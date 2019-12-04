@@ -1,7 +1,8 @@
 from flask_restful import Resource
 from functools import partial
 from .sensor import check_ir
-from XNBackend.models import FireAlarmSensors, IRSensors, Elevators, TrackingDevices, Relay
+from sqlalchemy import or_
+from XNBackend.models import IRSensors, Elevators, TrackingDevices, Relay, Switches
 
 FLOOR3 = 0
 FLOOR4 = 1
@@ -35,7 +36,7 @@ def floor_detail(floor, main=None, aux=None, tracking=None, e1='', e2='', room=0
     ALARM = 0
 
     ROOM_NUMBER = room
-    ir_occupied, ir_empty, ir_status = check_ir(floor)
+    ir_occupied, ir_empty, ir_error, ir_status = check_ir(floor)
 
     main_light = main.filter(Relay.locator.has(floor=floor))
     aux_light = aux.filter(Relay.locator.has(floor=floor))
@@ -119,6 +120,21 @@ class Device(Resource):
         else:
             elevator2_loc = str(elevator2.latest_record.floor) if elevator2.latest_record.direction == 0 else "运行中"
 
+        total_main = Switches.query.filter(Switches.channel == 1)
+        total_main_count = total_main.count()
+        total_main_run_count = total_main.filter(Switches.status == 1).count()
+
+        total_aux_4 = Switches.query.filter(Switches.channel == 4
+                                            ).filter(Switches.switch_panel.has(panel_type=0))
+        total_aux_2 = Switches.query.filter(Switches.channel == 2
+                                            ).filter(Switches.switch_panel.has(panel_type=1))
+        total_aux_4_count = total_aux_4.count()
+        total_aux_2_count = total_aux_2.count()
+        total_aux_4_run_count = total_aux_4.filter(Switches.status == 1).count()
+        total_aux_2_run_count = total_aux_2.filter(Switches.status == 1).count()
+        
+        total_light_count = total_main_count + total_aux_4_count + total_aux_2_count
+
         relay_main_light = Relay.query.filter(Relay.switch.has(channel=1))
         relay_aux_light = Relay.query.filter(Relay.switch.has(channel=4))
         tracking = TrackingDevices.query.filter(TrackingDevices.device_type == 1)
@@ -176,11 +192,11 @@ class Device(Resource):
                     "ai": cal_total(total_floor, 'camera', 'ai')
                 },
                 "light": {
-                    "total": cal_total(total_floor, 'light', 'total'),
-                    "total_main": cal_total(total_floor, 'light', 'total_main'),
-                    "main_run": cal_total(total_floor, 'light', 'main_run'),
-                    "total_aux": cal_total(total_floor, 'light', 'total_aux'),
-                    "aux_run": cal_total(total_floor, 'light', 'aux_run')
+                    "total": total_light_count,
+                    "total_main": total_main_count,
+                    "main_run": total_main_run_count,
+                    "total_aux": total_aux_2_count + total_aux_4_count,
+                    "aux_run": total_aux_2_run_count + total_aux_4_run_count
                 }
             }
         }
