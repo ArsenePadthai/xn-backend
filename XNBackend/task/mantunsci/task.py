@@ -1,20 +1,22 @@
 # -*- coding: utf-8 -*-
 import requests
 import time
+from flask import current_app
 from datetime import datetime, timedelta
-from mantunsci_auth.auth import MantunsciAuthInMemory
+from XNBackend.api_client.mantunsci import MantunsciAuthInMemory
 from XNBackend.task import celery, logger
-from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly, EnergyConsumeByHour, MantunciBox, S3FC20, S3FC20Records, BoxAlarms
+from XNBackend.models.models import db, EnergyConsumeDaily, EnegyConsumeMonthly,\
+    EnergyConsumeByHour, MantunciBox, S3FC20, S3FC20Records, BoxAlarms
 
 L = logger.getChild(__name__)
 
 param = {
-    'auth_url':'http://192.168.50.117/ebx-rook/',
-    'username':'demo',
-    'password':'1QAZxsw2)(',
-    'app_key':'O000000063',
-    'app_secret':'3EB15ED2C0B6DFDDFAE4CC7BDDB58F0C',
-    'redirect_uri':'http://192.168.50.117:8000/callback'
+    'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
+    'username': current_app.config['MANTUNSCI_USERNAME'],
+    'password': current_app.config['MANTUNSCI_PASSWORD'],
+    'app_key': current_app.config['MANTUNSCI_APP_KEY'],
+    'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
+    'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI']
 }
 
 localtime = time.localtime(time.time())
@@ -33,13 +35,19 @@ def req_session():
     global s
     if s is None:
         s = requests.Session()
-        s.auth = MantunsciAuthInMemory(param['auth_url'], param['username'], param['password'], param['app_key'], param['app_secret'], param['redirect_uri'])
+        s.auth = MantunsciAuthInMemory(param['auth_url'],
+                                       param['username'],
+                                       param['password'],
+                                       param['app_key'],
+                                       param['app_secret'],
+                                       param['redirect_uri'])
     return s
 
 
 def data_requests(body):
+    # assume it is correct
     s = req_session()
-    r = s.post('http://192.168.50.117/ebx-rook/invoke/router.as', data=body)    
+    r = s.post(current_app.config['MANTUNSCI_ROUTER_URI'], data=body)
     message = r.json()
     return message
 
@@ -58,26 +66,41 @@ def data_generator_1(schema):
         data = data_requests(schema)
         yield data, box.id
 
-    
+
 @celery.task(bind=True)
 def all_boxes(self):
     record = []
-    body = {'method':'GET_BOXES', 'projectCode':'P00000000001'}
-    try:
-        data = data_requests(body)['data']
-    except Exception:
-        self.retry(countdown=3.0)
-        return ''
-    for i in range(len(data)):
-        breaker = MantunciBox.query.filter_by(mac=data[i]['mac']).first()
-        if breaker is None:
-            box = MantunciBox(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'])
-            record.append(box)
-        else:
-            breaker.name = data[i]['name']
-            breaker.phone = data[i]['phone']
-    db.session.bulk_save_objects(record)
-    db.session.commit()    
+    body = {'method': 'GET_BOXES',
+            'projectCode': 'P00000000001'}
+    data = data_requests(body)['data']
+    import pprint
+    pprint.pprint(data)
+    # # try:
+    #     data = data_requests(body)['data']
+    # except Exception:
+    #     self.retry(countdown=3.0)
+    #     return ''
+    # for i in range(len(data)):
+    #     breaker = MantunciBox.query.filter_by(mac=data[i]['mac']).first()
+    #     if breaker is None:
+    #         box = MantunciBox(mac=data[i]['mac'], name=data[i]['name'], phone=data[i]['phone'])
+    #         record.append(box)
+    #     else:
+    #         breaker.name = data[i]['name']
+    #         breaker.phone = data[i]['phone']
+    # db.session.bulk_save_objects(record)
+    # db.session.commit()
+
+
+@celery.task()
+def update_s3fc20_current():
+    all_s3fc20 = S3FC20.query
+    for i in all_s3fc20:
+        body = {
+            "method": "GET_BOX_CHANNELS_REALTIME",
+            "projectCode": current_app.config["MANTUNSCI_PROJECT_CODE"],
+        }
+        data_requests()
 
 
 @celery.task(bind=True)

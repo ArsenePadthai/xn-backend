@@ -27,13 +27,6 @@ def data_parse(bs:bytes, sensor_type=None):
         data = header_info[start_code].parse(body)
     return data[0]
 
-'''
-class AddressParseMixin:
-    @property
-    def _address(self):
-        assert len(self.address) == 5
-        return unpack('>Q', b'\x00\x00\x00' + self.address)[0] & 0xffffffffff
-'''
 
 class InfraredSensorData(Parsable, Marshallable):
     fields = '''

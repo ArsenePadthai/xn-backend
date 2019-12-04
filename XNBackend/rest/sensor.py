@@ -1,7 +1,6 @@
 from flask_restful import Resource, reqparse
 from XNBackend.models import IRSensors, TrackingDevices, \
     LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner
-from XNBackend.api_client.air_conditioner import set_ac_data
 from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 
 
@@ -41,13 +40,14 @@ def return_room_status(floor, status):
 
 class AirCondition(Resource):
     def get(self):
-        floor = floor_parser.parse_args().get('floor')
-        ac_count = 24
+        floor = str(floor_parser.parse_args().get('floor'))
+        ac_query = AirConditioner.query.filter(AirConditioner.locator_id == floor)
+        total = ac_query.count()
         # occupied, empty, status = check_ir(floor)
         ac_status = [True, True, False] * 8
 
         return {
-            "total": ac_count,
+            "total": total,
             "empty_run": 8,
             "full_running": 16,
             "detail": return_room_status(floor, ac_status)

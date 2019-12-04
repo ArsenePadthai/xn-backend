@@ -316,16 +316,6 @@ class EnegyConsumeMonthly(db.Model, TimeStampMixin):
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
-class IRSensorStatus(db.Model, TimeStampMixin):
-    __tablename__ = 'ir_sensor_status'
-    id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey("ir_sensors.id",
-                                              ondelete="CASCADE"))
-    value = db.Column(db.Integer)
-    status = db.Column(db.BOOLEAN)
-    sensor = relationship('IRSensors', foreign_keys=[sensor_id])
-
-
 class IRSensors(db.Model, TimeStampMixin):
     __tablename__ = 'ir_sensors'
     id = db.Column(Integer, primary_key=True)
@@ -334,17 +324,18 @@ class IRSensors(db.Model, TimeStampMixin):
     locator = db.Column(Unicode(length=MEDIUM_LEN),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
-    latest_record_id = db.Column(Integer,
-                                 ForeignKey(IRSensorStatus.id,
-                                            ondelete='SET NULL'))
+    # latest_record_id = db.Column(Integer,
+    #                              ForeignKey(IRSensorStatus.id,
+    #                                         ondelete='SET NULL'))
     threshold = db.Column(db.Integer)
     delay = db.Column(db.Integer)
-    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
-                                                 ondelete='SET NULL'))
+    tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id, ondelete='SET NULL'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-    latest_record = relationship('IRSensorStatus',
-                                 foreign_keys=[latest_record_id])
+    # latest_record = relationship('IRSensorStatus',
+    #                              foreign_keys=[latest_record_id])
     locator_body = relationship('Locators', foreign_keys=[locator])
+    # 1 means detected; 0 means no detected
+    status = db.Column(db.SmallInteger)
 
 
 class AQIValues(db.Model, TimeStampMixin):

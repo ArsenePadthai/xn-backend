@@ -57,8 +57,13 @@ pipenv run flask run
 * 重新执行```alembic upgrade head```
 
 
-
 # 设计相关
+
+## 卓岚设备
+### 卓岚设备对接控灯面板， 同时也对接红外传感器
+
+### update 2019.12.02 决定对于红外设备，不采用latest_record_id, 删除IRSensorStatus这张表, 以及删除IRSensors中的column (latest_record_id, latest_record)
+
 
 
 
