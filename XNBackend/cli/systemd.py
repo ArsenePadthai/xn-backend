@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from XNBackend.models import SwitchPanel, IRSensors
 
 systemd = AppGroup('systemd')
-ENGINE = create_engine('mysql+pymysql://test:test@127.0.0.1:3306/xn?charset=utf8mb4', echo=True)
+ENGINE = create_engine('mysql+pymysql://xn:Pass1234@127.0.0.1:3306/xn?charset=utf8mb4', echo=True)
 Session = sessionmaker(bind=ENGINE)
 session = Session()
 

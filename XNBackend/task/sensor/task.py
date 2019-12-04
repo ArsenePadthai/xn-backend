@@ -235,6 +235,7 @@ def handle_ir_signal(data, ip):
     status = data[-2]
     ir = IRSensors.query.filter(IRSensors.addr_no == addr
                                 ).filter(IRSensors.tcp_config.has(ip=ip)).first()
+    L.debug(f'addr {addr}, status {status}, ir {ir}')
     if ir:
         ir.status = status
         try:

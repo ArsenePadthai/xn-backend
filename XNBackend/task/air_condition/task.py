@@ -1,6 +1,7 @@
 from XNBackend.task import celery, logger
-from XNBackend.models import db, AirConditioner
+from XNBackend.models import db, AirConditioner, IRSensors
 from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
+from XNBackend.task.sensor.task import ir_query
 
 L = logger.getChild(__name__)
 
@@ -32,3 +33,11 @@ def periodic_query_air_condition():
 def send_cmd_to_air_condition(device_index_code: str, **kwarg):
     ret = set_ac_data(device_index_code, **kwarg)
     return 0 if ret.get('errMsg') == 'ok' else 1
+
+
+@celery.task()
+def periodic_update_ir_status():
+    irs = IRSensors.query
+    for ir in irs:
+        ir_query.apply_async(args=[ir.batch_no, ir.addr_no],
+                             queue=ir.tcp_config.ip+':'+str(ir.tcp_config.port))
