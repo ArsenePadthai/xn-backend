@@ -24,15 +24,14 @@ def control(code):
 
     ip_list = []
     for p in Panels:
-        if p.tcp_config.ip not in ip_list:
+        if p.tcp_config and p.tcp_config.ip not in ip_list:
             ip_list.append(p.tcp_config.ip)
     for i in Irs:
-        if i.tcp_config.ip not in ip_list:
+        if i.tcp_config and i.tcp_config.ip not in ip_list:
             ip_list.append(i.tcp_config.ip)
 
-    # os.system('sudo systemctl {} xn-sensor@relay.service'.format(code))
+    os.system('sudo systemctl {} xn-sensor@relay.service'.format(code))
     for ip in ip_list:
-        click.echo(ip)
-    #     addr = ip + ':' + '4196'
-    #     click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
-    #     os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
+        addr = ip + ':' + '4196'
+        click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
+        os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
