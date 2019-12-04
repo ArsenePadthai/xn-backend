@@ -37,8 +37,8 @@ class Room(Resource):
         room_switch = Switches.query.filter(Switches.switch_panel.has(locator_id=str(room_number)))
         main_switch = room_switch.filter(Switches.channel == 1).first()
         aux_switch = room_switch.filter(Switches.channel == 4).first()
-        main_light_value = main_switch.status if main_switch else 0
-        aux_light_value = aux_switch.status if aux_switch else 0
+        main_light_value = main_switch.status if main_switch else -1
+        aux_light_value = aux_switch.status if aux_switch else -1
         return {
             "ac": ac_info,
             "main_light": main_light_value,
