@@ -1,5 +1,5 @@
 from flask_restful import Resource, reqparse
-from XNBackend.models import IRSensors, TrackingDevices, Switches, AirConditioner
+from XNBackend.models import IRSensors, TrackingDevices, Switches, AirConditioner, Relay
 from XNBackend.api_client.air_conditioner import get_ac_data
 
 
@@ -38,9 +38,14 @@ class Room(Resource):
 
         room_switch = Switches.query.filter(Switches.switch_panel.has(locator_id=str(room_number)))
         main_switch = room_switch.filter(Switches.channel == 1).first()
+
         aux_switch = room_switch.filter(Switches.channel == 4).first()
+        aux_light_value = -1
+        if aux_switch:
+            relay = Relay.query.filter(Relay.switch_id == aux_switch.id).first()
+            if relay:
+                aux_light_value = aux_switch.status
         main_light_value = main_switch.status if main_switch else -1
-        aux_light_value = aux_switch.status if aux_switch else -1
         return {
             "ac": ac_info,
             "main_light": main_light_value,

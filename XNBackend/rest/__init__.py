@@ -7,13 +7,16 @@ from .energy import Energy
 from .env import Env
 from .device import Device
 from .room import Room
-from .sensor import AirCondition, FireDetector, IRSensor, Elevator, Camera, Light, FaceRecognition
+from .sensor import FireDetector, IRSensor, Elevator, Camera, Light, FaceRecognition
 from .callback import AcsCallback
+from .air_condition import AirConditionControl, AirCondition
 
 api = Api(dashboard_api_bp)
 
 api.add_resource(LightControl, '/api/control/light')
 api.add_resource(AcsControl, '/api/control/acs')
+api.add_resource(AirConditionControl, '/api/control/air_condition')
+
 api.add_resource(MantunciBoxAlarm, '/api/dashboard/alarm')
 api.add_resource(Energy, '/api/dashboard/energy')
 api.add_resource(Env, '/api/dashboard/env')

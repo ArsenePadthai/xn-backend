@@ -7,13 +7,7 @@ from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 floor_parser = reqparse.RequestParser()
 floor_parser.add_argument('floor', required=True, type=int, help='require floor number')
 
-ac_patch_parser = reqparse.RequestParser()
-ac_patch_parser.add_argument('device_index_code', required=True, type=str, 
-                             help='require device_index_code')
-ac_patch_parser.add_argument('ac_on', required=False, type=bool)
-ac_patch_parser.add_argument('set_mode', required=False, type=int)
-ac_patch_parser.add_argument('temperature', required=False, type=int)
-ac_patch_parser.add_argument('set_speed', required=False, type=int)
+
 
 
 def check_ir(floor):
@@ -52,46 +46,6 @@ def return_room_status(floor, status):
         room_status['%d%s' % (floor, str(index + 1).zfill(2))] = stat
     return room_status
 
-
-class AirCondition(Resource):
-    def get(self):
-        floor = str(floor_parser.parse_args().get('floor'))
-        ac_query = AirConditioner.query.filter(AirConditioner.locator_id == floor)
-        total = ac_query.count()
-        ac_status = [True, True, False] * 8
-
-        return {
-            "total": total,
-            "empty_run": 8,
-            "full_running": 16,
-            "detail": return_room_status(floor, ac_status)
-        }
-
-    def patch(self):
-        args = ac_patch_parser.parse_args()
-        device_index_code = args.get('device_index_code')
-        run = args.get('ac_on')
-        mode = args.get('set_mode')
-        temperature = args.get('temperature')
-        fan_speed = args.get('set_speed')
-        kwarg_control = {}
-
-        if run is not None:
-            kwarg_control['StartStopStatus'] = 1 if run else 0
-        if mode:
-            kwarg_control['ModeCmd'] = mode
-        if temperature:
-            kwarg_control['TempSet'] = temperature
-        if fan_speed:
-            kwarg_control['FanSpeedSet'] = fan_speed
-
-        if not kwarg_control:
-            return {"errMsg": f'no parameter is found for set air condition'}
-
-        send_cmd_to_air_condition.apply_async(args=[device_index_code],
-                                              kwargs=kwarg_control,
-                                              queue="general")
-        return {'errMsg': 'ok'}
 
 
 class FireDetector(Resource):

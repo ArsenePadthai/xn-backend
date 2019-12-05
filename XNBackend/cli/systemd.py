@@ -20,15 +20,16 @@ session = Session()
 )
 def control(code):
     Panels = session.query(SwitchPanel)
-    Irs = session.query(IRSensors)
+    # Irs = session.query(IRSensors)
 
     ip_list = []
     for p in Panels:
         if p.tcp_config and p.tcp_config.ip not in ip_list:
             ip_list.append(p.tcp_config.ip)
-    for i in Irs:
-        if i.tcp_config and i.tcp_config.ip not in ip_list:
-            ip_list.append(i.tcp_config.ip)
+
+    # for i in Irs:
+    #     if i.tcp_config and i.tcp_config.ip not in ip_list:
+    #         ip_list.append(i.tcp_config.ip)
 
     os.system('sudo systemctl {} xn-sensor@relay.service'.format(code))
     for ip in ip_list:

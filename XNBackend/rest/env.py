@@ -58,7 +58,8 @@ def return_floor_detail(floor, floor_data):
         floor: {
             "temperature": floor_data[TEM],
             "humidity": floor_data[HUM],
-            "lux": floor_data[LUX],
+            #"lux": floor_data[LUX],
+            "lux": 103,
             "co2": floor_data[CO2],
             "pm25": floor_data[PM],
             "fan": floor_data[FAN],
@@ -123,7 +124,8 @@ class Env(Resource):
             "total": {
                 "temperature": total_tem,
                 "humidity": total_hum,
-                "lux": form_float(total_lux_avg),
+                # "lux": form_float(total_lux_avg),
+                "lux": 123,
                 "co2": form_float(total_co2_avg),
                 "pm25": form_float(total_pm25_avg),
                 "fan": floor3[FAN],

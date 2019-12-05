@@ -76,7 +76,7 @@ def data_generate(model):
             yield data, sensor
 
 
-def keep_alive(ip, port):
+def keep_alive(ip, port, use_for):
     Session = sessionmaker(bind=ENGINE)
     session = Session()
     while 1:
@@ -87,12 +87,12 @@ def keep_alive(ip, port):
             continue
 
         # require: CAN receive response after sending query data
-        panel = session.query(SwitchPanel).filter(
-            SwitchPanel.tcp_config.has(ip=ip)
-            ).first()
-        data = bytes.fromhex('DA {} {} 86 86 86 EE'
-                             .format(hex(panel.batch_no)[2:].rjust(2, '0'),
-                                     hex(panel.addr_no)[2:].rjust(2, '0')))
+        if use_for == 'panel':
+            obj = session.query(SwitchPanel).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
+        else:
+            obj = session.query(IRSensors).filter(IRSensors.tcp_config.has(ip=ip)).first()
+        data = bytes.fromhex('DA {} {} 86 86 86 EE'.format(hex(obj.batch_no)[2:].rjust(2, '0'),
+                                                           hex(obj.addr_no)[2:].rjust(2, '0')))
         try:
             client.send(data)
         except Exception:
@@ -100,7 +100,7 @@ def keep_alive(ip, port):
         time.sleep(10)
 
 
-def day_control(control_id): 
+def day_control(control_id):
     control = AutoControllers.query.filter_by(id=control_id).first()
     for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id,
                                            channel=1).order_by():
@@ -314,24 +314,19 @@ def configure_workers(sender=None, **kwargs):
         addr = hostname.split('@')[1].split(':')
         if len(addr) < 2:
             return
-        L.error('==========================')
-        L.error(f'start to configure worker: {hostname}, {addr}')
-        L.error('==========================')
+        L.info('==========================')
+        L.info(f'start to configure worker: {hostname}, {addr}')
+        L.info('==========================')
         sensor = session.query(IRSensors).filter(IRSensors.tcp_config.has(ip=addr[0])).first()
-        if sensor:
-            tcp_client(addr[0], int(addr[1]))
-            thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), 'ir'))
-            thread.daemon = True
-            thread.start()
-        else:
-            tcp_client(addr[0], int(addr[1]), block=False)
-            thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), 'panel'))
-            thread_ka = Thread(target=keep_alive, args=(addr[0], int(addr[1])))
-            thread.daemon = True
-            thread_ka.daemon = True
-            thread.start()
-            time.sleep(2)
-            thread_ka.start()
+        tcp_client(addr[0], int(addr[1]), block=False)
+        use_for = 'ir' if sensor else 'panel'
+        thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), use_for))
+        thread_ka = Thread(target=keep_alive, args=(addr[0], int(addr[1]), use_for))
+        thread.daemon = True
+        thread_ka.daemon = True
+        thread.start()
+        time.sleep(2)
+        thread_ka.start()
     except Exception:
         L.exception('configure works failed')
         time.sleep(300)
