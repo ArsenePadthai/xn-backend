@@ -304,12 +304,11 @@ def client_recv(ip, port, use_for):
 
 @worker_process_init.connect(retry=True)
 def configure_workers(sender=None, **kwargs):
-    Session = sessionmaker(bind=ENGINE)
-    session = Session()
     try:
         assert '-n' in sys.argv, 'worker name must be assigned by -n'
         hostname = sys.argv[sys.argv.index('-n') + 1]
         if hostname == 'general':
+            # do nothing
             return
         addr = hostname.split('@')[1].split(':')
         if len(addr) < 2:
@@ -317,11 +316,11 @@ def configure_workers(sender=None, **kwargs):
         L.info('==========================')
         L.info(f'start to configure worker: {hostname}, {addr}')
         L.info('==========================')
-        sensor = session.query(IRSensors).filter(IRSensors.tcp_config.has(ip=addr[0])).first()
+        # ir = session.query(IRSensors).filter(IRSensors.tcp_config.has(ip=addr[0])).first()
         tcp_client(addr[0], int(addr[1]), block=False)
-        use_for = 'ir' if sensor else 'panel'
-        thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), use_for))
-        thread_ka = Thread(target=keep_alive, args=(addr[0], int(addr[1]), use_for))
+        # use_for = 'ir' if ir else 'panel'
+        thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), 'panel'))
+        thread_ka = Thread(target=keep_alive, args=(addr[0], int(addr[1]), 'panel'))
         thread.daemon = True
         thread_ka.daemon = True
         thread.start()
