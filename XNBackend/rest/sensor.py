@@ -1,6 +1,7 @@
 from flask_restful import Resource, reqparse
+from sqlalchemy import or_
 from XNBackend.models import IRSensors, TrackingDevices, \
-    LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner
+    LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner, Switches, SwitchPanel
 from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 
 
@@ -129,33 +130,50 @@ class Camera(Resource):
 
 class Light(Resource):
     def get(self):
-        BOTH_OFF = 0
-        AUX_ON = 1
-        MAIN_ON = 2
-        BOTH_ON = 3
         floor = floor_parser.parse_args().get('floor')
-        main_light = Relay.query.filter(Relay.locator.has(floor=floor)).filter(Relay.switch.has(channel=1))
-        aux_light = Relay.query.filter(Relay.locator.has(floor=floor)).filter(Relay.switch.has(channel=2))
-        on_count = 0
+        floor_map = {
+            3: range(301, 325),
+            4: range(401, 428),
+            5: range(501, 523),
+            6: range(601, 630),
+            7: range(701, 730),
+            9: range(901, 905),
+        }
 
-        details = dict()
-        for i in main_light.all():
-            if i.latest_record and i.latest_record.value:
-                on_count += 1
-                details.setdefault(str(i.locator.zone), 0)
-                details[str(i.locator.zone)] += 1 << 1
+        status_dict = dict()
+        main_count = 0
+        main_count_on = 0
+        aux_count = 0
+        aux_count_on = 0
 
-        for i in aux_light.all():
-            if i.latest_record and i.latest_record.value:
-                on_count += 1
-                details.setdefault(str(i.locator.zone), 0)
-                details[str(i.locator.zone)] += 1
+        for room in floor_map[floor]:
+            main_count += 1
+            status_dict[str(room)] = [-1, -1]
+            panel = SwitchPanel.query.filter(SwitchPanel.locator_id == str(room)).first()
+            if panel:
+                switch = Switches.query.filter(Switches.switch_panel_id == panel.id)
+                main_light = switch.filter(Switches.channel == 1).first()
+                if main_light:
+                    status_dict[str(room)][0] = main_light.status
+                    if main_light.status:
+                        main_count_on += 1
+
+                if panel.panel_type == 0:
+                    aux_switch = switch.filter(Switches.channel == 4).first()
+                else:
+                    aux_switch = switch.filter(Switches.channel == 2).first()
+                if aux_switch:
+                    rel = Relay.query.filter(Relay.switch_id == aux_switch.id).first()
+                    if rel:
+                        status_dict[str(room)][1] = aux_switch.status
+                        aux_count += 1
+                        if aux_switch.status:
+                            aux_count_on += 1
 
         return {
-            "total": main_light.count() + aux_light.count(),
-            "online": main_light.count() + aux_light.count(),
-            "on": on_count,
-            "detail": details
+            "total": main_count + aux_count,
+            "on": main_count_on + aux_count_on,
+            "detail": status_dict
         }
 
 
