@@ -1,6 +1,7 @@
-from flask_restful import Resource, reqparse
+from flask_restful import Resource, reqparse, fields, marshal_with
+from datetime import datetime
 from sqlalchemy import or_
-from XNBackend.models import IRSensors, TrackingDevices, \
+from XNBackend.models import IRSensors, TrackingDevices, AppearRecords, \
     LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner, Switches, SwitchPanel
 from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 
@@ -8,6 +9,33 @@ from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 floor_parser = reqparse.RequestParser()
 floor_parser.add_argument('floor', required=True, type=int, help='require floor number')
 
+query_appear_parser = reqparse.RequestParser()
+query_appear_parser.add_argument('start',
+                                 required=True,
+                                 type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'))
+query_appear_parser.add_argument('end',
+                                 required=True,
+                                 type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'))
+query_appear_parser.add_argument('name',
+                                 required=False,
+                                 type=str)
+query_appear_parser.add_argument('certificateNo',
+                                 required=False,
+                                 type=str)
+
+appear_fields = {
+    'id': fields.Integer,
+    'faceId': fields.Integer,
+    'name': fields.String,
+    'sex': fields.String,
+    'certificateType': fields.String,
+    'certificateNum': fields.String,
+    'facePicture': fields.String,
+    'cameraIndexCode': fields.String,
+    'deviceName': fields.String,
+    'eventType': fields.String,
+    'happenTime': fields.DateTime
+}
 
 
 
@@ -178,57 +206,18 @@ class Light(Resource):
 
 
 class FaceRecognition(Resource):
+    @marshal_with(appear_fields)
     def get(self):
-        floor = floor_parser.parse_args().get('floor')
-        return [
-            {
-                "name": "mayun",
-                "time": "20190827T120000",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "zhangsan",
-                "time": "20190827T130000",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "lisi",
-                "time": "20190828T093000",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "wangwu",
-                "time": "20190827T120000",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "liuliu",
-                "time": "20190820T142013",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "heqi",
-                "time": "20190827T130142",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "sunba",
-                "time": "20190827T095120",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "linjiu",
-                "time": "20190827T165607",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "chenshi",
-                "time": "20190827T141145",
-                "device_code": "xxxx"
-            },
-            {
-                "name": "liuqiangdong",
-                "time": "20190827T112019",
-                "device_code": "xxxx"
-            },
-        ]
+        args = query_appear_parser.parse_args()
+        start = args.get('start')
+        end = args.get('end')
+        name = args.get('name')
+        certificateNo = args.get('certificateNo')
+        appear_records = AppearRecords.query.filter(AppearRecords.happenTime > start
+                                                    ).filter(AppearRecords.happenTime < end)
+        if name:
+            appear_records = appear_records.filter(AppearRecords.name == name)
+        if certificateNo:
+            appear_records = appear_records.filter(AppearRecords.certificateNum == certificateNo)
+        appear_records = appear_records.order_by(AppearRecords.happenTime.desc())
+        return appear_records.all()

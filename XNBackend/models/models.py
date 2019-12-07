@@ -132,12 +132,16 @@ class AcsRecords(db.Model, TimeStampMixin):
 class AppearRecords(db.Model, TimeStampMixin):
     __tablename__ = 'appear_records'
     id = db.Column(Integer, primary_key=True)
-    user_id = db.Column(Integer, ForeignKey(Users.id,
-                                            ondelete='CASCADE'))
-    device_id = db.Column(Integer, ForeignKey(TrackingDevices.id,
-                                              ondelete="CASCADE"))
-    user = relationship('Users', backref='appear_record')
-    device = relationship('TrackingDevices', backref='appear_record')
+    faceId = db.Column(Integer)
+    name = db.Column(Unicode(length=MEDIUM_LEN))
+    sex = db.Column(Unicode(length=SHORT_LEN))
+    certificateType = db.Column(Unicode(length=LONG_LEN))
+    certificateNum = db.Column(Unicode(length=LONG_LEN))
+    facePicture = db.Column(Unicode(length=300))
+    cameraIndexCode = db.Column(Unicode(length=LONG_LEN))
+    deviceName = db.Column(Unicode(length=LONG_LEN))
+    eventType = db.Column(Integer)
+    happenTime = db.Column(TIMESTAMP)
 
 
 class LatestPosition(db.Model, TimeStampMixin):
