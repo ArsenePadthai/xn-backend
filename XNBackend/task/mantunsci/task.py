@@ -295,8 +295,10 @@ class MantunsciBoxReporter(RedisReporterBase):
         return addr2room
 
     @staticmethod
-    def parse_sf_content(content, mapping):
+    def parse_sf_content(content: dict, mapping):
         addr = content.get('addr')
+        if addr not in mapping:
+            return
         room = mapping[addr][0]
         measure_type = mapping[addr][1]
         rt_power = content.get('gW')
@@ -305,10 +307,7 @@ class MantunsciBoxReporter(RedisReporterBase):
         return rt_power, room, measure_type, int(updated_time.timestamp())
 
     def get_rd_key(self, room, measure):
-        key = self.rd_key_prefix + str(room) + str(measure)
-        if self.rd_key_tail:
-            key += self.rd_key_tail
-        return key
+        return self.prefix + str(room) + str(measure)
 
     def report(self):
         for mb in self.targets:
@@ -324,7 +323,13 @@ class MantunsciBoxReporter(RedisReporterBase):
                 return
 
             mapping = self.get_addr_mapping(mb.mac)
-            rt_power, room, measure_type, update_time = self.parse_sf_content(m_data['content'],
-                                                                              mapping)
-            key = self.get_rd_key(room, measure_type)
-            self.rd.set(key, (rt_power, update_time))
+            for paragraph in m_data['data']:
+                addr = paragraph.get('addr')
+                parse_ret = self.parse_sf_content(paragraph, mapping)
+                if not parse_ret:
+                    L.info(f'failed to parse addr {addr} for mantunscibox {mb.mac}')
+                    continue
+                rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph , mapping)
+                print(rt_power, room, measure_type, update_time)
+                key = self.get_rd_key(room, measure_type)
+                self.rd.set(key, (rt_power, update_time))
