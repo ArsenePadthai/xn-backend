@@ -1,112 +1,99 @@
+import redis
+import json
+import random
 from flask_restful import Resource
-from XNBackend.models import S3FC20
-from functools import partial
+from flask import current_app
 
-FLOOR3 = 0
-FLOOR4 = 1
-FLOOR5 = 2
-FLOOR6 = 3
-FLOOR7 = 4
-
-
-def check_divisor_zero(dividend, divisor):
-    return 0 if divisor == 0 else float('%.2f' % (dividend / divisor))
-
-
-def form_floor_data(floor_str, floor_index, elec=None, water=None, money=None,
-                    people=None, area=None, ac=None, socket=None, light=None, kitchen=None):
-    avg_elec = check_divisor_zero(elec[floor_index], people[floor_index])
-    avg_water = check_divisor_zero(elec[floor_index], people[floor_index])
-    avg_by_area = check_divisor_zero(elec[floor_index], area[floor_index])
-
-    return {
-        floor_str: {
-            "total": elec[floor_index],
-            "water": water[floor_index],
-            "money": money[floor_index],
-            "average_electric": avg_elec,
-            "average_water": avg_water,
-            "average_by_area": avg_by_area,
-            "ac_main": ac[floor_index],
-            "ac_inner": ac[floor_index],
-            "socket": socket[floor_index],
-            "light": light[floor_index],
-            "kitchen": kitchen[floor_index],
-        }
-    }
+R = redis.Redis(host='127.0.0.1', port=6379)
 
 
 class Energy(Resource):
+    """
+    MEASURE_LIGHT = 0
+    MEASURE_AC = 1
+    MEASURE_SOCKET = 2
+    """
 
-    def get(self):
-        MEASURE_LIGHT = 0
-        # TODO add ac later
-        # MEASURE_AC = 1
-        MEASURE_SOCKET = 2
-        # TODO check area
-        area_all = [300, 310, 305, 297, 312]
-        kitchen_all = [460, 341, 421, 164, 235]
-        people_all = [137, 87, 107, 90, 123]
+    @staticmethod
+    def get_room_data(room_no):
+        data = []
+        for i in range(0, 3):
+            key = '_'.join(['RTE', room_no, str(i)])
+            value = 0 if not R.get(key) else json.loads(R.get(key))
+            data.append(value)
+        return data
 
-        elec_all = [0, 0, 0, 0, 0]  # 3f, 4f, 5f, 6f, 7f
-        ac_all = [2, 3, 2, 3, 4]
-        light_all = [0, 0, 0, 0, 0]
-        socket_all = [0, 0, 0, 0, 0]
+    def get_floor_data(self, floor):
+        floor_light_power = 0
+        floor_ac_power = 0
+        floor_socket_power = 0
 
-        elec_3f = S3FC20.query.filter(S3FC20.locator.has(floor=3))
-        elec_3f_light = elec_3f.filter(S3FC20.measure_type == MEASURE_LIGHT)
-        # elec_3f_ac = elec_3f.filter(S3FC20.measure_type == MEASURE_AC)
-        elec_3f_socket = elec_3f.filter(S3FC20.measure_type == MEASURE_SOCKET)
+        floor_room_mapping = current_app.config['FLOOR_ROOM_MAPPING']
+        for room in floor_room_mapping[floor]:
+            room_data = self.get_room_data(str(room))
+            floor_light_power += room_data[0]
+            floor_ac_power += room_data[1]
+            floor_socket_power += room_data[2]
 
-        # sum
-        for i in elec_3f_light.all():
-            if i.latest_record:
-                light_all[FLOOR3] += i.latest_record.gW
-        ac_all[FLOOR3] = 200
-        for i in elec_3f_socket.all():
-            if i.latest_record:
-                socket_all[FLOOR3] += i.latest_record.gW
-        for i in elec_3f.all():
-            if i.latest_record:
-                elec_all[FLOOR3] += i.latest_record.gW
+        people_count = current_app.config['PEOPLE_COUNT'][floor]
+        total_water = random.randint(300, 400)
+        avg_water = int(total_water/people_count)
+        avg_area = int(1000/people_count)
+        kitchen = 0 if floor == 7 else random.randint(30, 60)
+        total_power = floor_light_power + floor_ac_power + floor_socket_power
+        money = int(total_power * current_app.config['UNIT_PRICE'])
+        avg_elec = int(total_power/people_count)
 
-        elec_all[FLOOR4] = 600
-        elec_all[FLOOR5] = 600
-        elec_all[FLOOR6] = 600
-        elec_all[FLOOR7] = 600
-
-        water_all = [400, 500, 300, 230, 280]
-
-        # TODO need to adjust the factor 1.4
-        money_all = [1.4*i for i in elec_all]
-
-        total_avg_elec = check_divisor_zero(sum(elec_all), sum(people_all))
-        total_avg_water = check_divisor_zero(sum(water_all), sum(people_all))
-        total_avg_by_area = check_divisor_zero(sum(elec_all), sum(area_all))
-
-        return_data = {
-            "total": {
-                "total": sum(elec_all),
-                "water": sum(water_all),
-                "money": sum(money_all),
-                "average_electric": total_avg_elec,
-                "average_water": total_avg_water,
-                "average_by_area": total_avg_by_area,
-                "ac_main": sum(ac_all),
-                "ac_inner": sum(ac_all),
-                "socket": sum(socket_all),
-                "light": sum(light_all),
-                "kitchen": sum(kitchen_all),
-            }
+        return {
+            "total": total_power,
+            "water": total_water,
+            "money": money,
+            "average_electric": avg_elec,
+            "average_water": avg_water,
+            "average_by_area": avg_area,
+            "ac_main": floor_ac_power,
+            "ac_inner": floor_ac_power,
+            "socket": floor_socket_power,
+            "light": floor_light_power,
+            "kitchen": kitchen
         }
 
-        get_floor_data = partial(form_floor_data, elec=elec_all, water=water_all, money=money_all, people=people_all,
-                                 area=area_all, ac=ac_all, socket=socket_all, light=light_all, kitchen=kitchen_all)
+    def get(self):
+        floors = [3, 4, 5, 6, 7, 9]
+        ret = dict()
+        building_power = 0
+        building_water = 0
+        ac_main = 0
+        ac_inner = 0
+        socket = 0
+        light = 0
+        kitchen = 0
+        peopel_all = sum(current_app.config['PEOPLE_COUNT'])
 
-        return_data.update(get_floor_data('3f', FLOOR3))
-        return_data.update(get_floor_data('4f', FLOOR4))
-        return_data.update(get_floor_data('5f', FLOOR5))
-        return_data.update(get_floor_data('6f', FLOOR6))
-        return_data.update(get_floor_data('7f', FLOOR7))
+        for f in floors:
+            floor_data = self.get_floor_data(f)
+            ret[str(f)+'f'] = floor_data
+            building_power += floor_data['total']
+            building_water += floor_data['water']
+            ac_main += floor_data['ac_main']
+            ac_inner += floor_data['ac_inner']
+            socket += floor_data['socket']
+            light += floor_data['light']
+            kitchen += floor_data['kitchen']
 
-        return return_data
+        ret['total'] = {
+            "total": building_power,
+            "water": building_water,
+            "money": building_power*current_app.config['UNIT_PRICE'],
+            "average_electric": int(building_power/peopel_all),
+            "average_water": int(building_water/peopel_all),
+            "average_by_area": int(10000/peopel_all),
+            "ac_main": ac_main,
+            "ac_inner": ac_inner,
+            "socket": socket,
+            "light": light,
+            "kitchen": kitchen
+        }
+
+        return ret
+

@@ -72,3 +72,26 @@ MANTUNSCI_APP_SECRET = '590752705B63B2DADD84050303C09ECF'
 MANTUNSCI_REDIRECT_URI = 'http://10.100.101.198/callback'
 MANTUNSCI_PROJECT_CODE = 'P00000000001'
 MANTUNSCI_ROUTER_URI = 'http://10.100.101.198/ebx-rook/invoke/router.as'
+
+# room number config
+FLOOR_ROOM_MAPPING = {
+    3: range(301, 325),
+    4: range(401, 428),
+    5: range(501, 523),
+    6: range(601, 630),
+    7: range(701, 730),
+    9: range(901, 905),
+    }
+
+# electricity price for kwh
+UNIT_PRICE = 0.6
+
+# floor people
+PEOPLE_COUNT = {
+    3: 50,
+    4: 50,
+    5: 60,
+    6: 60,
+    7: 60,
+    9: 60
+}
