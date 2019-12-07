@@ -19,7 +19,7 @@ class Energy(Resource):
         data = []
         for i in range(0, 3):
             key = '_'.join(['RTE', room_no, str(i)])
-            value = 0 if not R.get(key) else json.loads(R.get(key))
+            value = (0,0) if not R.get(key) else json.loads(R.get(key))
             data.append(value)
         return data
 
@@ -31,9 +31,9 @@ class Energy(Resource):
         floor_room_mapping = current_app.config['FLOOR_ROOM_MAPPING']
         for room in floor_room_mapping[floor]:
             room_data = self.get_room_data(str(room))
-            floor_light_power += room_data[0]
-            floor_ac_power += room_data[1]
-            floor_socket_power += room_data[2]
+            floor_light_power += room_data[0][0]
+            floor_ac_power += room_data[1][0]
+            floor_socket_power += room_data[2][0]
 
         people_count = current_app.config['PEOPLE_COUNT'][floor]
         total_water = random.randint(300, 400)
