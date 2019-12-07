@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import requests
 import time
+from datetime import datetime
 from flask import current_app
 from datetime import datetime, timedelta
 from XNBackend.api_client.mantunsci import MantunsciAuthInMemory
@@ -272,3 +273,58 @@ def control_airfan(self, cmd):
         return
     except Exception as e:
         L.error(e)
+
+
+class RedisReporterBase():
+    def __init__(self, redis_client, rd_key_prefix: str, targets: list,
+                 rd_key_tail=None):
+        self.rd = redis_client
+        self.prefix = rd_key_prefix
+        self.targets = targets
+        if rd_key_tail:
+            self.tail = rd_key_tail
+
+
+class MantunsciBoxReporter(RedisReporterBase):
+
+    @staticmethod
+    def get_addr_mapping(mb_mac):
+        addr2room = dict()
+        for sf in S3FC20.query.filter(S3FC20.box.has(mac=mb_mac)):
+            addr2room[sf.addr] = [sf.box.locator_id, sf.measure_type]
+        return addr2room
+
+    @staticmethod
+    def parse_sf_content(content, mapping):
+        addr = content.get('addr')
+        room = mapping[addr][0]
+        measure_type = mapping[addr][1]
+        rt_power = content.get('gW')
+        updated_time = content.get('updateTime')
+        updated_time = datetime.strptime(updated_time, '%Y-%m-%d %H:%M:%S')
+        return rt_power, room, measure_type, int(updated_time.timestamp())
+
+    def get_rd_key(self, room, measure):
+        key = self.rd_key_prefix + str(room) + str(measure)
+        if self.rd_key_tail:
+            key += self.rd_key_tail
+        return key
+
+    def report(self):
+        for mb in self.targets:
+            body = {'method': 'GET_BOX_CHANNELS_REALTIME', 
+                    'projectCode': 'P00000000001',
+                    'mac': mb.mac}
+            try:
+                m_data = data_requests(body)
+                assert m_data['code'] == '0'
+            except Exception as e:
+                L.exception(e)
+                L.error('failed to get mantunscibox realtime data')
+                return
+
+            mapping = self.get_addr_mapping(mb.mac)
+            rt_power, room, measure_type, update_time = self.parse_sf_content(m_data['content'],
+                                                                              mapping)
+            key = self.get_rd_key(room, measure_type)
+            self.rd.set(key, (rt_power, update_time))
