@@ -161,3 +161,4 @@ alembic.ini
 .vscode*
 requirements.txt
 celerybeat.pid
+scripts/ir_single.py

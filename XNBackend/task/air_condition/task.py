@@ -1,7 +1,9 @@
 from XNBackend.task import celery, logger
 from XNBackend.models import db, AirConditioner, IRSensors
 from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
-from XNBackend.task.sensor.task import ir_query
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import socket
 
 L = logger.getChild(__name__)
 
@@ -35,44 +37,46 @@ def send_cmd_to_air_condition(device_index_code: str, **kwarg):
     return 0 if ret.get('errMsg') == 'ok' else 1
 
 
+# TODO MOVE TO IR section
 @celery.task()
 def periodic_update_ir_status():
-    # irs = IRSensors.query
-    # for ir in irs:
-    #     ir_query.apply_async(args=[ir.batch_no, ir.addr_no],
-    #                          queue=ir.tcp_config.ip+':'+str(ir.tcp_config.port))
-    ENGINE = create_engine('mysql+pymysql://xn:Pass1234@10.100.101.199:3306/xn?charset=utf8mb4', echo=True)
+    ENGINE = create_engine('mysql+pymysql://xn:Pass1234@10.100.101.199:3306/xn?charset=utf8mb4',
+                           echo=False)
     Session = sessionmaker(bind=ENGINE)
     session = Session()
     all_ir = session.query(IRSensors).order_by(IRSensors.tcp_config_id)
+    client = None
+
     wrong_list = []
     for ir in all_ir:
         addr = hex(ir.addr_no).strip('0x').rjust(2, '0')
         ip = ir.tcp_config.ip
-        print(addr)
         data = bytes.fromhex(f'DA 00 {addr} 86 86 86 EE')
-        try:
-            assert client
-            assert client.getpeername()[0] == ip
-        except (NameError, AssertionError):
+
+        if client is None or client.getpeername()[0] != ip:
             try:
                 client.close()
-            except:
+            except Exception:
                 pass
+
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.settimeout(10)
             client.connect((ip, 4196))
+
         client.send(data)
         try:
             m = client.recv(1024)
             assert m[1] == 0
-            print(m)
+            ir.status = m[-2]
+            session.flush()
         except AssertionError as e:
-            print(e)
             wrong_list.append((ir.id, addr, int('0x'+addr, 0), ip))
         except Exception as e:
-            print(e)
             wrong_list.append((ir.id, addr, int('0x'+addr, 0), ip))
-    import pprint
-    pprint.pprint(wrong_list)
-    
+    try:
+        session.commit()
+    except Exception as e:
+        L.exception(e)
+        L.error('failed to save status to ir')
+        session.rollback()
+    L.error(wrong_list)
