@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import requests
 import time
+import json
 from datetime import datetime
 from flask import current_app
 from datetime import datetime, timedelta
@@ -309,6 +310,10 @@ class MantunsciBoxReporter(RedisReporterBase):
     def get_rd_key(self, room, measure):
         return self.prefix + str(room) + str(measure)
 
+    def set_value(self, key, value):
+        value_serialized = json.dumps(value)
+        self.rd.set(key, value_serialized)
+
     def report(self):
         for mb in self.targets:
             body = {'method': 'GET_BOX_CHANNELS_REALTIME', 
@@ -329,7 +334,8 @@ class MantunsciBoxReporter(RedisReporterBase):
                 if not parse_ret:
                     L.info(f'failed to parse addr {addr} for mantunscibox {mb.mac}')
                     continue
-                rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph , mapping)
+                rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph,
+                                                                                  mapping)
                 print(rt_power, room, measure_type, update_time)
                 key = self.get_rd_key(room, measure_type)
-                self.rd.set(key, (rt_power, update_time))
+                self.set_value(key, (rt_power, update_time))
