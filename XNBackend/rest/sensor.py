@@ -1,9 +1,7 @@
 from flask_restful import Resource, reqparse, fields, marshal_with
 from datetime import datetime
-from sqlalchemy import or_
 from XNBackend.models import IRSensors, TrackingDevices, AppearRecords, \
     LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner, Switches, SwitchPanel
-from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 
 
 floor_parser = reqparse.RequestParser()

@@ -1,9 +1,11 @@
-from XNBackend.task import celery, logger
-from XNBackend.models import db, AirConditioner, IRSensors
-from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
+import redis
+import socket
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import socket
+from XNBackend.task import celery, logger
+from XNBackend.models import db, AirConditioner, IRSensors, MantunciBox
+from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
+from XNBackend.task.utils import MantunsciBoxReporter
 
 L = logger.getChild(__name__)
 
@@ -80,3 +82,12 @@ def periodic_update_ir_status():
         L.error('failed to save status to ir')
         session.rollback()
     L.error(wrong_list)
+
+
+# TODO MOVE TO OTHER PLACES
+@celery.task()
+def periodic_get_realtime_power():
+    mbs = MantunciBox.query.all()
+    R = redis.Redis(host='127.0.0.1', port=6379)
+    reporter = MantunsciBoxReporter(R, 'RTE', mbs)
+    reporter.report()
