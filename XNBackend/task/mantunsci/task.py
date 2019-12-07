@@ -277,13 +277,11 @@ def control_airfan(self, cmd):
 
 
 class RedisReporterBase():
-    def __init__(self, redis_client, rd_key_prefix: str, targets: list,
-                 rd_key_tail=None):
+    def __init__(self, redis_client, rd_key_prefix: str, targets: list, sep='_'):
         self.rd = redis_client
         self.prefix = rd_key_prefix
         self.targets = targets
-        if rd_key_tail:
-            self.tail = rd_key_tail
+        self.sep = sep
 
 
 class MantunsciBoxReporter(RedisReporterBase):
@@ -308,7 +306,7 @@ class MantunsciBoxReporter(RedisReporterBase):
         return rt_power, room, measure_type, int(updated_time.timestamp())
 
     def get_rd_key(self, room, measure):
-        return self.prefix + str(room) + str(measure)
+        return self.sep.join([self.prefix, str(room), str(measure)])
 
     def set_value(self, key, value):
         value_serialized = json.dumps(value)
@@ -336,6 +334,7 @@ class MantunsciBoxReporter(RedisReporterBase):
                     continue
                 rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph,
                                                                                   mapping)
-                print(rt_power, room, measure_type, update_time)
                 key = self.get_rd_key(room, measure_type)
+                print(key)
+                print((rt_power, update_time))
                 self.set_value(key, (rt_power, update_time))
