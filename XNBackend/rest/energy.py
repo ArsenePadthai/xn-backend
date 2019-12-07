@@ -96,4 +96,3 @@ class Energy(Resource):
         }
 
         return ret
-

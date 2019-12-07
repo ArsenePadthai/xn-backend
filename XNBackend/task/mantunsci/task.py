@@ -2,6 +2,7 @@
 import requests
 import time
 import json
+import redis
 from datetime import datetime
 from flask import current_app
 from datetime import datetime, timedelta
@@ -300,7 +301,7 @@ class MantunsciBoxReporter(RedisReporterBase):
             return
         room = mapping[addr][0]
         measure_type = mapping[addr][1]
-        rt_power = content.get('gW')
+        rt_power = content.get('aW')
         updated_time = content.get('updateTime')
         updated_time = datetime.strptime(updated_time, '%Y-%m-%d %H:%M:%S')
         return rt_power, room, measure_type, int(updated_time.timestamp())
@@ -335,6 +336,13 @@ class MantunsciBoxReporter(RedisReporterBase):
                 rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph,
                                                                                   mapping)
                 key = self.get_rd_key(room, measure_type)
-                print(key)
-                print((rt_power, update_time))
                 self.set_value(key, (rt_power, update_time))
+            L.error('xxdddsdsdsdsdsdsdsdsdsds')
+
+
+@celery.task(bind=True)
+def periodic_get_realtime_power():
+    mbs = MantunciBox.query.all()
+    R = redis.Redis(host='127.0.0.1', port=6379)
+    reporter = MantunsciBoxReporter(R, 'RTE', mbs)
+    reporter.report()
