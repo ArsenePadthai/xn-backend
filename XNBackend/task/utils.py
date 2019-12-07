@@ -8,12 +8,18 @@ from XNBackend.api_client.mantunsci import MantunsciAuthInMemory
 
 L = logger.getChild(__name__)
 param = {
-    'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
-    'username': current_app.config['MANTUNSCI_USERNAME'],
-    'password': current_app.config['MANTUNSCI_PASSWORD'],
-    'app_key': current_app.config['MANTUNSCI_APP_KEY'],
-    'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
-    'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI']
+    # 'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
+    # 'username': current_app.config['MANTUNSCI_USERNAME'],
+    # 'password': current_app.config['MANTUNSCI_PASSWORD'],
+    # 'app_key': current_app.config['MANTUNSCI_APP_KEY'],
+    # 'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
+    # 'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI'],
+    'auth_url': 'http://10.100.101.198:8088/ebx-rook/',
+    'username': 'prod',
+    'password': 'abc123++',
+    'app_key': 'O000000063',
+    'app_secret': '590752705B63B2DADD84050303C09ECF',
+    'redirect_uri': 'http://10.100.101.198:8088/ebx-rook/demo.jsp'
 }
 
 
