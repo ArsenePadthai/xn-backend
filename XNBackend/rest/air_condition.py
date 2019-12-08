@@ -64,13 +64,15 @@ class AirCondition(Resource):
         for room in room_range:
             room_air_conditions = AirConditioner.query\
                 .filter(AirConditioner.locator.has(zone=int(room))).all()
+            if room_air_conditions:
+                status_dict[str(room)] = dict()
             for room_ac in room_air_conditions:
                 if room_ac.ac_on is None:
                     status = -1
                 else:
                     status = room_ac.ac_on
-                status_dict[str(room)] = {room_ac.device_index_code: status}
-
+                status_dict[str(room)].update({room_ac.device_index_code: status})
+                
         return {
             "total": total,
             "run": on_count,
