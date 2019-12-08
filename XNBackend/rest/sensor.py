@@ -173,28 +173,28 @@ class Light(Resource):
         aux_count_on = 0
 
         for room in floor_map[floor]:
-            main_count += 1
-            status_dict[str(room)] = [-1, -1]
             panel = SwitchPanel.query.filter(SwitchPanel.locator_id == str(room)).first()
-            if panel:
-                switch = Switches.query.filter(Switches.switch_panel_id == panel.id)
-                main_light = switch.filter(Switches.channel == 1).first()
-                if main_light:
-                    status_dict[str(room)][0] = main_light.status
-                    if main_light.status:
-                        main_count_on += 1
+            if not panel:
+                continue
 
-                if panel.panel_type == 0:
-                    aux_switch = switch.filter(Switches.channel == 4).first()
-                else:
-                    aux_switch = switch.filter(Switches.channel == 2).first()
-                if aux_switch:
-                    rel = Relay.query.filter(Relay.switch_id == aux_switch.id).first()
-                    if rel:
-                        status_dict[str(room)][1] = aux_switch.status
-                        aux_count += 1
-                        if aux_switch.status:
-                            aux_count_on += 1
+            main_count += 1
+            status_dict[str(room)] = [-1]
+            switch = Switches.query.filter(Switches.switch_panel_id == panel.id)
+            main_light = switch.filter(Switches.channel == 1).first()
+            if main_light and getattr(main_light, 'status', None) in [0, 1]:
+                status_dict[str(room)][0] = main_light.status
+                if main_light.status:
+                    main_count_on += 1
+
+            aux_channel_no = 2 if panel.panel_type == 1 else 4
+            aux_switch = switch.filter(Switches.channel == aux_channel_no).first()
+            if aux_switch:
+                rel = Relay.query.filter(Relay.switch_id == aux_switch.id).first()
+                if rel and getattr(aux_switch, 'status', None) in [0, 1]:
+                    status_dict[str(room)].append(aux_switch.status)
+                    aux_count += 1
+                    if aux_switch.status:
+                        aux_count_on += 1
 
         return {
             "total": main_count + aux_count,

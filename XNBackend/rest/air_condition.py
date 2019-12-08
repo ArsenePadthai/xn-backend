@@ -1,4 +1,5 @@
 from flask_restful import Resource, reqparse
+from flask import current_app
 from XNBackend.models import AirConditioner
 from XNBackend.task.air_condition.task import send_cmd_to_air_condition
 
@@ -55,26 +56,20 @@ class AirCondition(Resource):
         ac_query = AirConditioner.query.filter(AirConditioner.locator.has(floor=floor))
         total = ac_query.count()
         on_count = ac_query.filter(AirConditioner.ac_on == 1).count()
-        floor_map = {
-            3: range(301, 325),
-            4: range(401, 428),
-            5: range(501, 523),
-            6: range(601, 630),
-            7: range(701, 730),
-            9: range(901, 905),
-        }
+        floor_map = current_app.config['FLOOR_ROOM_MAPPING']
 
         room_range = floor_map[int(floor)]
         status_dict = dict()
+
         for room in room_range:
-            status_dict[str(room)] = -1
-        for ac in ac_query:
-            status = ac.ac_on
-            room_no = ac.locator.internal_code
-            if status_dict.get(room_no) == 1:
-                continue
-            else:
-                status_dict[room_no] = status
+            room_air_conditions = AirConditioner.query\
+                .filter(AirConditioner.locator.has(zone=int(room))).all()
+            for room_ac in room_air_conditions:
+                if room_ac.ac_on is None:
+                    status = -1
+                else:
+                    status = room_ac.ac_on
+                status_dict[str(room)] = {room_ac.device_index_code: status}
 
         return {
             "total": total,
