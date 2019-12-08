@@ -40,7 +40,7 @@ class AcsCallback(Resource):
                             certificateNum=certificateNum,
                             facePicture=facePicture,
                             cameraIndexCode=cameraIndexCode,
-                            deviceName=deviceName.lstrip('AI-'),
+                            deviceName=deviceName,
                             eventType=e['eventType'],
                             happenTime=happenTime
                         )
