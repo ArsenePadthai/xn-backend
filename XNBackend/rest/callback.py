@@ -10,6 +10,8 @@ L = logging.getLogger()
 class AcsCallback(Resource):
     def post(self):
         json_body = request.get_json()
+        if json_body['params']['events'][0]['srcIndex'] == '96ee43fccdf8442f995030b4f60ebdf1':
+            return
         ability = json_body['params']['ability']
         if ability == 'event_face_recognition':
             events = json_body['params']['events']
@@ -50,9 +52,9 @@ class AcsCallback(Resource):
             for e in events:
                 event_type = e['eventType']
                 happenTime = datetime.strptime(e['happenTime'][:19], '%Y-%m-%dT%H:%M:%S')
-                if event_type == 199941:
+                if event_type == 198913:
                     door_new_status = 1
-                elif event_type == 199942:
+                elif event_type == 199169:
                     door_new_status = 0
                 else:
                     return
