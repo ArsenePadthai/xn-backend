@@ -22,6 +22,8 @@ param = {
     'redirect_uri': 'http://10.100.101.198:8088/ebx-rook/demo.jsp'
 }
 
+s = None
+
 
 def req_session():
     global s

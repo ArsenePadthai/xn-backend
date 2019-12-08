@@ -84,7 +84,7 @@ class Energy(Resource):
         ret['total'] = {
             "total": building_power,
             "water": building_water,
-            "money": building_power*current_app.config['UNIT_PRICE'],
+            "money": int(building_power*current_app.config['UNIT_PRICE']),
             "average_electric": int(building_power/peopel_all),
             "average_water": int(building_water/peopel_all),
             "average_by_area": int(10000/peopel_all),

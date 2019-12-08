@@ -1,7 +1,11 @@
+import logging
 from flask_restful import Resource
 from flask import request
 from XNBackend.task.hik.acs import * 
 import pprint
+
+L = logging.getLogger()
+
 
 
 class AcsCallback(Resource):
@@ -9,6 +13,8 @@ class AcsCallback(Resource):
         json_body = request.get_json()
         print('============================')
         print(json_body)
+        L.error(json_body)
+        return {}
         # event = json_body['params']["events"][0]
         # event_type = event['eventType']
 
