@@ -21,6 +21,12 @@ query_appear_parser.add_argument('certificateNo',
                                  required=False,
                                  type=str)
 
+
+class MyDateTime(fields.Raw):
+    def format(self, value):
+        return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
 appear_fields = {
     'id': fields.Integer,
     'faceId': fields.Integer,
@@ -32,9 +38,8 @@ appear_fields = {
     'cameraIndexCode': fields.String,
     'deviceName': fields.String,
     'eventType': fields.String,
-    'happenTime': fields.DateTime
+    'happenTime': MyDateTime(attribute='happenTime')
 }
-
 
 
 def check_ir(floor):
