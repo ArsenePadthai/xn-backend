@@ -81,6 +81,12 @@ class MantunsciBoxReporter(RedisReporterBase):
         value_serialized = json.dumps(value)
         self.rd.set(key, value_serialized)
 
+    def get_value(self, key):
+        ret = self.rd.get(key)
+        if ret:
+            value = json.loads(ret)
+            return value
+
     def report(self):
         for mb in self.targets:
             body = {'method': 'GET_BOX_CHANNELS_REALTIME',
@@ -104,4 +110,11 @@ class MantunsciBoxReporter(RedisReporterBase):
                 rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph,
                                                                                   mapping)
                 key = self.get_rd_key(room, measure_type)
-                self.set_value(key, (rt_power, update_time))
+                prev_value = self.get_value(key)
+                if not prev_value:
+                    self.set_value(key, (rt_power, update_time))
+                else:
+                    prev_time = prev_value[1]
+                    if update_time == prev_time:
+                        rt_power += prev_value[0]
+                    self.set_value(key, (rt_power, update_time))

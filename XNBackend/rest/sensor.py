@@ -79,7 +79,6 @@ def return_room_status(floor, status):
     return room_status
 
 
-
 class FireDetector(Resource):
     def get(self):
         floor = floor_parser.parse_args().get('floor')
