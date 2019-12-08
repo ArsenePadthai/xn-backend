@@ -125,5 +125,6 @@ class EnergyShow(Resource):
             socket_value = self.get_r_value(socket_key)
             room_power = light_value[0] + ac_value[0] + socket_value[0]
 
-            data_dict[str(room)] = (room_power, light_value(0), ac_value(0), socket_value(0))
-        return sorted(data_dict.items(), key=lambda x: x[0], reverse=True)
+            data_dict[str(room)] = (room_power, light_value[0], ac_value[0], socket_value[0])
+        #return data_dict
+        return sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
