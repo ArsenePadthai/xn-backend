@@ -27,11 +27,6 @@ class MyDateTime(fields.Raw):
         return value.strftime("%Y-%m-%d %H:%M:%S")
 
 
-class RemoveAI(fields.Raw):
-    def format(self, value):
-        return value.lstrip('AI-')
-
-
 appear_fields = {
     'id': fields.Integer,
     'faceId': fields.Integer,
@@ -41,7 +36,7 @@ appear_fields = {
     'certificateNum': fields.String,
     'facePicture': fields.String,
     'cameraIndexCode': fields.String,
-    'deviceName': RemoveAI(attribute='deviceName'),
+    'deviceName': fields.String,
     'eventType': fields.String,
     'happenTime': MyDateTime(attribute='happenTime')
 }
