@@ -3,7 +3,7 @@ from .light import LightControl
 from .acs import AcsControl, Acs
 from ._blueprint import dashboard_api_bp
 from .mantunci_alarm import MantunciBoxAlarm
-from .energy import Energy
+from .energy import Energy, EnergyShow
 from .env import Env
 from .device import Device
 from .room import Room
@@ -32,3 +32,4 @@ api.add_resource(Light, '/api/dashboard/lights')
 api.add_resource(FaceRecognition, '/api/dashboard/faceRecog')
 api.add_resource(Acs, '/api/dashboard/acs')
 api.add_resource(AcsCallback, '/api/callback/acs')
+api.add_resource(EnergyShow, '/api/dashboard/energyshow')

@@ -1,10 +1,16 @@
 import redis
 import json
 import random
-from flask_restful import Resource
+from flask_restful import Resource, reqparse
 from flask import current_app
 
 R = redis.Redis(host='127.0.0.1', port=6379)
+
+floor_parser = reqparse.RequestParser()
+floor_parser.add_argument('floor',
+                          required=True,
+                          type=int,
+                          help='require floor number')
 
 
 class Energy(Resource):
@@ -19,7 +25,7 @@ class Energy(Resource):
         data = []
         for i in range(0, 3):
             key = '_'.join(['RTE', room_no, str(i)])
-            value = (0,0) if not R.get(key) else json.loads(R.get(key))
+            value = (0, 0) if not R.get(key) else json.loads(R.get(key))
             data.append(value)
         return data
 
@@ -96,3 +102,28 @@ class Energy(Resource):
         }
 
         return ret
+
+
+class EnergyShow(Resource):
+    def get_r_value(self, key):
+        value = R.get(key)
+        return (0, 0) if not value else json.loads(value)
+
+    def get(self):
+        args = floor_parser.parse_args()
+        floor = args.get('floor')
+
+        floor_room_map = current_app.config['FLOOR_ROOM_MAPPING']
+        data_dict = dict()
+        for room in floor_room_map[floor]:
+            light_key = '_'.join(['RTE', str(room), '0'])
+            ac_key = '_'.join(['RTE', str(room), '1'])
+            socket_key = '_'.join(['RTE', str(room), '2'])
+
+            light_value = self.get_r_value(light_key)
+            ac_value = self.get_r_value(ac_key)
+            socket_value = self.get_r_value(socket_key)
+            room_power = light_value[0] + ac_value[0] + socket_value[0]
+
+            data_dict[str(room)] = (room_power, light_value(0), ac_value(0), socket_value(0))
+        return sorted(data_dict.items(), key=lambda x: x[0], reverse=True)
