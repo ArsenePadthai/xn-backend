@@ -129,6 +129,15 @@ class AcsRecords(db.Model, TimeStampMixin):
     acs = relationship('TrackingDevices', foreign_keys=[acs_id])
 
 
+class Door(db.Model, TimeStampMixin):
+    __tablename__ = "door"
+    door_index_code = db.Column(Unicode(length=LONG_LEN), primary_key=True)
+    status = db.Column(SmallInteger)
+    room_no_internal = db.Column(Unicode(length=LONG_LEN))
+    room_no_external = db.Column(Unicode(length=LONG_LEN))
+    desc = db.Column(Unicode(length=LONG_LEN))
+
+
 class AppearRecords(db.Model, TimeStampMixin):
     __tablename__ = 'appear_records'
     id = db.Column(Integer, primary_key=True)
