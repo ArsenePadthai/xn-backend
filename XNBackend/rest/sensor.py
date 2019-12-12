@@ -85,11 +85,10 @@ class FireDetector(Resource):
         fire_sensor_count = 80
         fire_sensor_alarm = 0
         ROOM_COUNT = 24
-        fire_status = [False] * ROOM_COUNT
+        fire_status = [0] * ROOM_COUNT
         return {
             "total": fire_sensor_count,
             "alarm": fire_sensor_alarm,
-            "normal": fire_sensor_count - fire_sensor_alarm,
             "detail": return_room_status(floor, fire_status)
         }
 

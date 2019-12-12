@@ -7,7 +7,7 @@ from sqlalchemy import ForeignKey, Unicode, BOOLEAN, TIMESTAMP, String, \
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from flask_bcrypt import generate_password_hash, check_password_hash
-from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
+from XNBackend.api_client.air_conditioner import get_ac_data
 
 L = logging.getLogger(__name__)
 
@@ -290,42 +290,34 @@ class BoxAlarms(db.Model, TimeStampMixin):
 
 
 class EnergyConsumeByHour(db.Model, TimeStampMixin, CarbonMixin):
+    """use updated_at to indicate statistic range"""
     __tablename__ = 'energy_consume_by_hour'
     carbon_mixin_watt_attr_name = 'electricity'
     consume_id = db.Column(Integer, primary_key=True)
-    box_id = db.Column(Integer, ForeignKey(MantunciBox.id,
-                                           ondelete='CASCADE'))
     s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
                                                ondelete='SET NULL'))
     electricity = db.Column(Float)
-    box = relationship('MantunciBox', foreign_keys=[
-                       box_id], backref='hour_consume')
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
 class EnergyConsumeDaily(db.Model, TimeStampMixin, CarbonMixin):
+    """use updated_at to indicate statistic range"""
     __tablename__ = 'energy_consume_daily'
     carbon_mixin_watt_attr_name = 'electricity'
     consume_id = db.Column(Integer, primary_key=True)
-    box_id = db.Column(Integer, ForeignKey(MantunciBox.id,
-                                           ondelete='CASCADE'))
     s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
                                                ondelete='SET NULL'))
     electricity = db.Column(Float)
-    box = relationship('MantunciBox', foreign_keys=[
-                       box_id], backref='daily_consume')
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
 class EnegyConsumeMonthly(db.Model, TimeStampMixin):
+    """use updated_at to indicate statistic range"""
     __tablename__ = 'energy_consume_monthly'
     consume_id = db.Column(Integer, primary_key=True)
-    box_id = db.Column(Integer, ForeignKey(MantunciBox.id))
     s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
                                                ondelete='SET NULL'))
     electricity = db.Column(Float)
-    box = relationship('MantunciBox', foreign_keys=[
-                       box_id], backref='monthly_consume')
     s3_fc20 = relationship('S3FC20', foreign_keys=[s3_fc20_id])
 
 
@@ -543,6 +535,14 @@ class Elevators(db.Model, TimeStampMixin):
                                                      ondelete='SET NULL'))
     latest_record = relationship('ElevatorStatus',
                                  foreign_keys=[latest_record_id])
+
+
+class Notification(db.Model, TimeStampMixin):
+    __tablename__ = 'notification'
+    id = db.Column(Integer, primary_key=True)
+    content = db.Column(Unicode(400))
+    color = db.Column(Unicode(50))
+    title = db.Column(Unicode(50))
 
 
 class AutoControllers(db.Model, TimeStampMixin):

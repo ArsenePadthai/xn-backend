@@ -1,120 +1,148 @@
 import json
 import requests
-from flask import current_app
+import pytz
 from datetime import datetime
-from XNBackend.models import S3FC20
+from XNBackend.models import S3FC20, MantunciBox, EnergyConsumeByHour, db
 from XNBackend.task import logger
 from XNBackend.api_client.mantunsci import MantunsciAuthInMemory
 
 L = logger.getChild(__name__)
-param = {
-    # 'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
-    # 'username': current_app.config['MANTUNSCI_USERNAME'],
-    # 'password': current_app.config['MANTUNSCI_PASSWORD'],
-    # 'app_key': current_app.config['MANTUNSCI_APP_KEY'],
-    # 'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
-    # 'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI'],
-    'auth_url': 'http://10.100.101.198:8088/ebx-rook/',
-    'username': 'prod',
-    'password': 'abc123++',
-    'app_key': 'O000000063',
-    'app_secret': '590752705B63B2DADD84050303C09ECF',
-    'redirect_uri': 'http://10.100.101.198:8088/ebx-rook/demo.jsp'
-}
-
-s = None
 
 
-def req_session():
-    global s
-    if s is None:
-        s = requests.Session()
-        s.auth = MantunsciAuthInMemory(param['auth_url'],
-                                       param['username'],
-                                       param['password'],
-                                       param['app_key'],
-                                       param['app_secret'],
-                                       param['redirect_uri'])
-    return s
+def get_s3fc20_addr_mapping(mb_mac):
+    addr2room = dict()
+    for sf in S3FC20.query.filter(S3FC20.box.has(mac=mb_mac)):
+        addr2room[sf.addr] = [sf.locator_id, sf.measure_type]
+    return addr2room
 
 
-def data_requests(body):
-    # assume it is correct
-    s = req_session()
-    r = s.post(current_app.config['MANTUNSCI_ROUTER_URI'], data=body)
-    message = r.json()
-    return message
+def get_mantunsci_addr_mapping():
+    mantunsci_dict = dict()
+    for m in MantunciBox.query:
+        mac = m.mac
+        mantunsci_dict[mac] = get_s3fc20_addr_mapping(mac)
+    return mantunsci_dict
 
 
-class RedisReporterBase():
-    def __init__(self, redis_client, rd_key_prefix: str, targets: list, sep='_'):
-        self.rd = redis_client
-        self.prefix = rd_key_prefix
-        self.targets = targets
-        self.sep = sep
+class S3FC20RealTimePower:
+    def __init__(self, content, room_mapping):
+        self.power = content['aW']
+        self.mac = content['mac']
+        self.addr = content['addr']
+        self.room, self.measure = room_mapping[self.mac][self.addr]
+        self.time = datetime.strptime(content['updateTime'],
+                                      '%Y-%m-%d %H:%M:%S')
+
+    def save_to_rds(self, rds_client, sep):
+        key = sep.join(['RTE', str(self.room), str(self.measure)])
+        value = json.dumps([self.power, int(self.time.timestamp())])
+        rds_client.set(key, value)
+
+    def __str__(self):
+        return self.room + ':' + str(self.power) + ':' + str(self.time)
 
 
-class MantunsciBoxReporter(RedisReporterBase):
-    @staticmethod
-    def get_addr_mapping(mb_mac):
-        addr2room = dict()
-        for sf in S3FC20.query.filter(S3FC20.box.has(mac=mb_mac)):
-            addr2room[sf.addr] = [sf.box.locator_id, sf.measure_type]
-        return addr2room
+class MantunsciBase:
+    def __init__(self, mac, auth_params):
+        self.mac = mac
+        self.auth_params = auth_params
+        self.s = requests.Session()
+        self.s.auth = MantunsciAuthInMemory(
+            auth_params['auth_url'],
+            auth_params['username'],
+            auth_params['password'],
+            auth_params['app_key'],
+            auth_params['app_secret'],
+            auth_params['redirect_uri'],
+        )
 
-    @staticmethod
-    def parse_sf_content(content: dict, mapping):
-        addr = content.get('addr')
-        if addr not in mapping:
+    def data_requests(self, req_body):
+        r = self.s.post(self.auth_params['router_uri'], req_body)
+        return r.json()
+
+    def load_data_from_response(self, mapping=None):
+        raise NotImplementedError
+
+    def save_data(self):
+        raise NotImplementedError
+
+
+class MantunsciRealTimePower(MantunsciBase):
+    def __init__(self, mac, auth_params, rds_client):
+        super(MantunsciRealTimePower, self).__init__(mac, auth_params)
+        self.rds_client = rds_client
+        self.req_body = {
+            "method": "GET_BOX_CHANNELS_REALTIME",
+            "projectCode": self.auth_params['project_code'],
+            'mac': self.mac
+        }
+        self.s3fc20s = []
+
+    def load_data_from_response(self, mapping=None):
+        resp = self.data_requests(self.req_body)
+        if resp['code'] != '0':
             return
-        room = mapping[addr][0]
-        measure_type = mapping[addr][1]
-        rt_power = content.get('aW')
-        updated_time = content.get('updateTime')
-        updated_time = datetime.strptime(updated_time, '%Y-%m-%d %H:%M:%S')
-        return rt_power, room, measure_type, int(updated_time.timestamp())
+        else:
+            for s in resp['data']:
+                mac_info = s['mac']
+                addr_info = s['addr']
+                if mapping.get(mac_info).get(addr_info):
+                    self.s3fc20s.append(S3FC20RealTimePower(s, mapping))
 
-    def get_rd_key(self, room, measure):
-        return self.sep.join([self.prefix, str(room), str(measure)])
+    def save_data(self):
+        for s in self.s3fc20s:
+            s.save_to_rds(self.rds_client, '_')
 
-    def set_value(self, key, value):
-        value_serialized = json.dumps(value)
-        self.rd.set(key, value_serialized)
 
-    def get_value(self, key):
-        ret = self.rd.get(key)
-        if ret:
-            value = json.loads(ret)
-            return value
+class ElectriConsumeHour(MantunsciBase):
+    def __init__(self, mac, auth_params, year, month, day, db_session, req_body):
+        super(ElectriConsumeHour, self).__init__(mac, auth_params)
+        self.year = year
+        self.month = month
+        self.day = day
+        self.req_body = req_body
+        self.consumption_record = []
+        self.db_session = db.session
+        self.tz_info = pytz.timezone('Asia/Shanghai')
 
-    def report(self):
-        for mb in self.targets:
-            body = {'method': 'GET_BOX_CHANNELS_REALTIME',
-                    'projectCode': 'P00000000001',
-                    'mac': mb.mac}
-            try:
-                m_data = data_requests(body)
-                assert m_data['code'] == '0'
-            except Exception as e:
-                L.exception(e)
-                L.error('failed to get mantunscibox realtime data')
-                return
+    def load_data_from_response(self, mapping=None):
+        resp = self.data_requests(self.req_body)
+        if resp['code'] != '0':
+            return []
+        else:
+            for time_range in resp['data']:
+                happen_time = datetime(year=self.year, month=self.month, day=self.day, hour=int(time_range),
+                                       tzinfo=self.tz_info)
+                for entry in resp['data'][time_range]:
+                    addr = entry['addr']
+                    s3fc20 = S3FC20.query.filter(S3FC20.addr == addr).filter(S3FC20.box.has(mac=self.mac)).first()
+                    if s3fc20:
+                        record = EnergyConsumeByHour(s3_fc20_id=s3fc20.id,
+                                                     updated_at=happen_time,
+                                                     electricity=entry['electricity'])
+                        self.consumption_record.append(record)
+            return self.consumption_record
 
-            mapping = self.get_addr_mapping(mb.mac)
-            for paragraph in m_data['data']:
-                addr = paragraph.get('addr')
-                parse_ret = self.parse_sf_content(paragraph, mapping)
-                if not parse_ret:
-                    L.info(f'failed to parse addr {addr} for mantunscibox {mb.mac}')
-                    continue
-                rt_power, room, measure_type, update_time = self.parse_sf_content(paragraph,
-                                                                                  mapping)
-                key = self.get_rd_key(room, measure_type)
-                prev_value = self.get_value(key)
-                if not prev_value:
-                    self.set_value(key, (rt_power, update_time))
-                else:
-                    prev_time = prev_value[1]
-                    if update_time == prev_time:
-                        rt_power += prev_value[0]
-                    self.set_value(key, (rt_power, update_time))
+    def save_data(self):
+        self.db_session.bulk_save_objects(self.consumption_record)
+        try:
+            db.session.commit()
+        except Exception as e:
+            L.exception(e)
+            db.session.rollback()
+
+
+class EnergyConsumeDay(ElectriConsumeHour):
+
+    def load_data_from_response(self, mapping=None):
+        resp = self.data_requests(self)
+        if resp['code'] != '0':
+            return []
+        else:
+            pass
+
+
+
+
+
+

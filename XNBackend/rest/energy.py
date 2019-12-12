@@ -125,6 +125,12 @@ class EnergyShow(Resource):
             socket_value = self.get_r_value(socket_key)
             room_power = light_value[0] + ac_value[0] + socket_value[0]
 
-            data_dict[str(room)] = (room_power, light_value[0], ac_value[0], socket_value[0])
+            data_dict[str(room)] = (room_power, light_value[0], ac_value[0], socket_value[0], random.randint(0, 1))
+
         #return data_dict
-        return sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
+        m = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
+        from collections import OrderedDict
+        a = OrderedDict()
+        for i in m:
+            a[i[0]] = i[1]
+        return a
