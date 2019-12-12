@@ -57,6 +57,8 @@ class AirCondition(Resource):
         total = ac_query.count()
         on_count = ac_query.filter(AirConditioner.ac_on == 1).count()
         floor_map = current_app.config['FLOOR_ROOM_MAPPING']
+        if int(floor) not in floor_map:
+            return {'code': -1, "errorMsg": "floor out of range"}
 
         room_range = floor_map[int(floor)]
         status_dict = dict()

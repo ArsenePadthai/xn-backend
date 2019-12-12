@@ -10,6 +10,10 @@ from .room import Room
 from .sensor import FireDetector, IRSensor, Elevator, Camera, Light, FaceRecognition
 from .callback import AcsCallback
 from .air_condition import AirConditionControl, AirCondition
+from .aqi import AQISensor
+from .notification import NotificationApi
+from .eoc import EOC
+from .electric_consume import ElectricConsumeByDay, ElectricConsumeByHour, ElectricConsumeByMonth
 
 api = Api(dashboard_api_bp)
 
@@ -32,4 +36,14 @@ api.add_resource(Light, '/api/dashboard/lights')
 api.add_resource(FaceRecognition, '/api/dashboard/faceRecog')
 api.add_resource(Acs, '/api/dashboard/acs')
 api.add_resource(AcsCallback, '/api/callback/acs')
+
+# new api
 api.add_resource(EnergyShow, '/api/dashboard/energyshow')
+api.add_resource(AQISensor, '/api/dashboard/aqi')
+api.add_resource(NotificationApi, '/api/dashboard/notification')
+api.add_resource(EOC, '/api/dashboard/eoc')
+api.add_resource(ElectricConsumeByHour, '/api/dashboard/electric_consume_hour')
+api.add_resource(ElectricConsumeByDay, '/api/dashboard/electric_consume_day')
+api.add_resource(ElectricConsumeByMonth, '/api/dashboard/electric_consume_month')
+
+
