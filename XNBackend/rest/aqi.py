@@ -13,4 +13,4 @@ class AQISensor(Resource):
                 "hum": {"in": 0.6, "out": 13},
                 "pm25": {"in": 43, "out": 33},
                 "co2": {"in": 66},
-                "tvoc": "12"}
+                "tvoc": {"in": 45, "out": 66}}
