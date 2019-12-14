@@ -32,6 +32,8 @@ class AppearRecordsApi(Resource):
 
         subq = AppearRecords.query\
             .with_entities(AppearRecords.certificateNum, func.max(AppearRecords.happenTime).label('maxtime'))\
+            .filter(AppearRecords.happenTime > start)\
+            .filter(AppearRecords.happenTime < end)\
             .group_by(AppearRecords.certificateNum)\
             .subquery('t2')
         a = AppearRecords.query\
