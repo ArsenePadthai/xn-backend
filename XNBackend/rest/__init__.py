@@ -12,8 +12,8 @@ from .callback import AcsCallback
 from .air_condition import AirConditionControl, AirCondition
 from .aqi import AQISensor
 from .notification import NotificationApi
-from .eoc import EOC
 from .electric_consume import ElectricConsumeByDay, ElectricConsumeByHour, ElectricConsumeByMonth
+from .appear_records import AppearRecordsApi
 
 api = Api(dashboard_api_bp)
 
@@ -41,9 +41,9 @@ api.add_resource(AcsCallback, '/api/callback/acs')
 api.add_resource(EnergyShow, '/api/dashboard/energyshow')
 api.add_resource(AQISensor, '/api/dashboard/aqi')
 api.add_resource(NotificationApi, '/api/dashboard/notification')
-api.add_resource(EOC, '/api/dashboard/eoc')
 api.add_resource(ElectricConsumeByHour, '/api/dashboard/electric_consume_hour')
 api.add_resource(ElectricConsumeByDay, '/api/dashboard/electric_consume_day')
 api.add_resource(ElectricConsumeByMonth, '/api/dashboard/electric_consume_month')
+api.add_resource(AppearRecordsApi, '/api/dashboard/appear_records')
 
 

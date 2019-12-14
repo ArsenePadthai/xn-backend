@@ -2,6 +2,7 @@ from flask_restful import Resource, reqparse, fields, marshal_with
 from datetime import datetime
 from XNBackend.models import IRSensors, TrackingDevices, AppearRecords, \
     LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner, Switches, SwitchPanel
+from .utils import MyDateTime
 
 
 floor_parser = reqparse.RequestParser()
@@ -20,12 +21,6 @@ query_appear_parser.add_argument('name',
 query_appear_parser.add_argument('certificateNo',
                                  required=False,
                                  type=str)
-
-
-class MyDateTime(fields.Raw):
-    def format(self, value):
-        return value.strftime("%Y-%m-%d %H:%M:%S")
-
 
 appear_fields = {
     'id': fields.Integer,
