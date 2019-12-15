@@ -6,11 +6,11 @@ from XNBackend.models import EnergyConsumeDaily, S3FC20
 time_range_parse = reqparse.RequestParser()
 time_range_parse.add_argument('start',
                               required=True,
-                              type=lambda x: datetime.strptime(x, '%Y%m%dT%H:%M:%S'),
+                              type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
                               help='need start time')
 time_range_parse.add_argument('end',
                               required=True,
-                              type=lambda x: datetime.strptime(x, '%Y%m%dT%H:%M:%S'),
+                              type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
                               help='need end time')
 time_range_parse.add_argument('floor',
                               type=int,
@@ -38,20 +38,21 @@ class ElectricConsumeByDay(Resource):
             measure = enery_consume.s3_fc20.measure_type
             if measure == 0:
                 measure_name = 'light'
-                light += enery_consume.electricity
+                light += enery_consume.electricity * 1000
             elif measure == 1:
                 measure_name = 'ac'
-                ac += enery_consume.electricity
+                ac += enery_consume.electricity*1000
             else:
                 measure_name = 'socket'
-                socket += enery_consume.electricity
-            detail[this_room][measure_name] = enery_consume.electricity
+                socket += enery_consume.electricity*1000
+            detail[this_room][measure_name] = int(enery_consume.electricity*1000)
 
         time_key = time_marker.strftime('%Y-%m-%d')
-        return {time_key: {"light": light,
-                           "ac": ac,
-                           "socket": socket,
-                           "detail": detail}}
+        return {time_key: {"light": int(light),
+                           "ac": int(ac),
+                           "socket": int(socket),
+                           "detail": detail}
+                }
 
     def get(self):
         ret = []
