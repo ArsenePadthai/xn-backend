@@ -2,7 +2,7 @@ import json
 import requests
 import pytz
 from datetime import datetime
-from XNBackend.models import S3FC20, MantunciBox, EnergyConsumeByHour, db
+from XNBackend.models import db, S3FC20, MantunciBox, EnergyConsumeByHour, EnergyConsumeDaily
 from XNBackend.task import logger
 from XNBackend.api_client.mantunsci import MantunsciAuthInMemory
 
@@ -135,14 +135,18 @@ class ElectriConsumeHour(MantunsciBase):
 class EnergyConsumeDay(ElectriConsumeHour):
 
     def load_data_from_response(self, mapping=None):
-        resp = self.data_requests(self)
+        resp = self.data_requests(self.req_body)
         if resp['code'] != '0':
             return []
         else:
-            pass
-
-
-
-
-
+            happen_time = datetime(year=self.year, month=self.month, day=self.day, tzinfo=self.tz_info)
+            for entry in resp['data']:
+                addr = entry['addr']
+                s3fc20 = S3FC20.query.filter(S3FC20.addr == addr).filter(S3FC20.box.has(mac=self.mac)).first()
+                if s3fc20:
+                    record = EnergyConsumeDaily(s3_fc20_id=s3fc20.id,
+                                                updated_at=happen_time,
+                                                electricity=entry['electricity'])
+                    self.consumption_record.append(record)
+            return self.consumption_record
 

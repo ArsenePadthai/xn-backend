@@ -11,7 +11,7 @@ notification_post_parse.add_argument('color', )
 
 class NotificationApi(Resource):
     def get(self):
-        n = Notification.query.order_by(Notification.updated_at.desc()).first()
+        n = Notification.query.order_by(Notification.created_at.desc()).first()
         return {
             "title": n.title,
             "content": n.content,

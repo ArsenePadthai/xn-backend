@@ -1,6 +1,6 @@
 import redis
 import socket
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from flask import current_app
@@ -123,7 +123,7 @@ def periodic_electricity_usage_hour():
     }
     mbs = MantunciBox.query
     session = db.session
-    current_time = datetime.now()
+    current_time = datetime.now() + timedelta(days=-1)
     for mb in mbs:
         req_body = {
             "method": "GET_BOX_HOUR_POWER",
@@ -138,3 +138,33 @@ def periodic_electricity_usage_hour():
         elec_hour.load_data_from_response()
         elec_hour.save_data()
 
+
+@celery.task()
+def periodic_electricity_usage_day():
+    """每天凌晨获取前一天的日消耗"""
+    auth_param = {
+        'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
+        'username': current_app.config['MANTUNSCI_USERNAME'],
+        'password': current_app.config['MANTUNSCI_PASSWORD'],
+        'app_key': current_app.config['MANTUNSCI_APP_KEY'],
+        'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
+        'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI'],
+        'router_uri': current_app.config['MANTUNSCI_ROUTER_URI'],
+        'project_code': current_app.config['MANTUNSCI_PROJECT_CODE']
+    }
+    mbs = MantunciBox.query
+    session = db.session
+    current_time = datetime.now() + timedelta(days=-1)
+    for mb in mbs:
+        req_body = {
+            "method": "GET_BOX_DAY_POWER",
+            "projectCode": auth_param['project_code'],
+            'mac': mb.mac,
+            'year': current_time.year,
+            'month': current_time.month,
+            'day': current_time.day
+        }
+        elec_day = EnergyConsumeDay(mb.mac, auth_param, current_time.year,
+                                    current_time.month, current_time.day, session, req_body)
+        elec_day.load_data_from_response()
+        elec_day.save_data()
