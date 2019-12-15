@@ -1,16 +1,16 @@
 from flask_restful import Resource, reqparse
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app
 from XNBackend.models import EnergyConsumeDaily, S3FC20
 
 time_range_parse = reqparse.RequestParser()
 time_range_parse.add_argument('start',
                               required=True,
-                              type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
+                              type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S')-timedelta(hours=1),
                               help='need start time')
 time_range_parse.add_argument('end',
                               required=True,
-                              type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
+                              type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S')-timedelta(hours=1),
                               help='need end time')
 time_range_parse.add_argument('floor',
                               type=int,
