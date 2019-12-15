@@ -9,8 +9,8 @@ class AQISensor(Resource):
     def get(self):
         args = floor_parser.parse_args()
         floor = args.get('floor')
-        return {"tem": {"in": 11, "out": 12},
-                "hum": {"in": 0.6, "out": 13},
-                "pm25": {"in": 43, "out": 33},
-                "co2": {"in": 66},
-                "tvoc": {"in": 45, "out": 66}}
+        return {"tem": {"in": 20, "out": 16},
+                "hum": {"in": 80, "out": 80},
+                "pm25": {"in": 43, "out": 54},
+                "co2": {"in": 243},
+                "tvoc": {"in": 0.2, "out": 0.1}}

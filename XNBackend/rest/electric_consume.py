@@ -27,6 +27,7 @@ class ElectricConsumeByDay(Resource):
         floor_map = current_app.config['FLOOR_ROOM_MAPPING'][floor]
         for room in floor_map:
             detail[str(room)] = {"light": 0, "ac": 0, "socket": 0}
+        detail['999'] = {"light": 0, "ac": 0, "socket": 0}
 
         subq = S3FC20.query.filter(S3FC20.locator_id.like(str(floor)+'%')).subquery('t2')
         enery_consume_floor = EnergyConsumeDaily.query\
