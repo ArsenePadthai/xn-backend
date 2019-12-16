@@ -1,7 +1,6 @@
 from flask_restful import Resource, reqparse
-from XNBackend.task.hik.acs import *
-from XNBackend.task.hik.task import acs_control 
-from XNBackend.models.models import db, TrackingDevices, Locators, Door
+from XNBackend.tasks.hik.tasks import acs_control
+from XNBackend.models.models import TrackingDevices, Door
 
 acs_parser = reqparse.RequestParser()
 acs_parser.add_argument('room_no', required=True, type=str)
@@ -43,24 +42,3 @@ class Acs(Resource):
             'open': total_open_count,
             'detail': status_dict
         }
-
-
-class AcsEvent(Resource):
-    def post(self):
-        args = acs_post_parser.parse_args()
-        method = args.get('method')
-        params = args.get('params')['events'][0]
-        print(params)
-        '''
-        if params.get('eventTypes') == '196893':
-            face_recognition.delay(params['data']['ExtEventCardNo'], params['srcName'])
-        elif params.get('eventTypes') == '198919':
-            door_control.delay()
-        elif params.get('eventTypes') == '198657':
-            door_destroy.delay()
-        '''
-
-
-
-
-

@@ -1,6 +1,6 @@
-from XNBackend.task import celery
+from XNBackend.tasks import celery
 from XNBackend.models import IRSensors
-from XNBackend.task.sensor.task import ir_query
+from XNBackend.tasks.sensor.tasks import ir_query
 
 
 @celery.task()

@@ -1,5 +1,5 @@
-from XNBackend.task import celery
-from .task import data_requests 
+from XNBackend.tasks import celery
+from .tasks import data_requests
 from XNBackend.models.models import db, Users, TrackingDevices, AcsRecords, AppearRecords, HeatMapSnapshots, LatestPosition
 
 

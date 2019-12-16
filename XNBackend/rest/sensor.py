@@ -1,5 +1,6 @@
 from flask_restful import Resource, reqparse, fields, marshal_with
 from datetime import datetime
+from flask import current_app
 from XNBackend.models import IRSensors, TrackingDevices, AppearRecords, \
     LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner, Switches, SwitchPanel
 from .utils import MyDateTime
@@ -91,6 +92,9 @@ class FireDetector(Resource):
 class IRSensor(Resource):
     def get(self):
         floor = floor_parser.parse_args().get('floor')
+        floor_map = current_app.config['FLOOR_ROOM_MAPPING']
+        if int(floor) not in floor_map:
+            return {'code': -1, "errorMsg": "floor out of range"}
         occupied, empty, error, status = check_ir(floor)
 
         return {

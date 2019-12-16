@@ -1,6 +1,6 @@
 import unittest
 from XNBackend.app.factory import create_app, db
-from XNBackend.task.utils import get_mantunsci_addr_mapping
+from XNBackend.tasks.utils import get_mantunsci_addr_mapping
 
 
 class TestUtils(unittest.TestCase):

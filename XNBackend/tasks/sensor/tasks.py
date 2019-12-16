@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from enum import Enum
 
 from XNBackend.parser.protocol import data_parse
-from XNBackend.task import celery, logger
+from XNBackend.tasks import celery, logger
 from XNBackend.models.models import db, IRSensors, AQIValues, AQISensors, \
     LuxValues, LuxSensors, Switches, SwitchPanel, Relay, TcpConfig, AutoControllers
 
@@ -123,7 +123,7 @@ def night_control(control_id):
                 relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
 
 
-# @celery.task(serializer='pickle')
+# @celery.tasks(serializer='pickle')
 # def ir_query(control_id, auto, is_day=None):
 #     try:
 #         control = AutoControllers.query.filter_by(id=control_id).first()
@@ -373,7 +373,7 @@ def relay_panel_control(relay_id, is_open):
 
 
 
-# @celery.task(bind=True, serializer='pickle')
+# @celery.tasks(bind=True, serializer='pickle')
 # def relay_query(self, query_data, id):
 #     sensor = Relay.query.filter_by(id=id).first()
 #     L.info("Query the status of relay, send '%s' to the server", query_data)
@@ -459,11 +459,3 @@ def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
         for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
             network_relay_control_sync.apply_async(args=[relay.id, is_open], queue='relay')
             L.info(f'remote control light-delay {relay.id}')
-    # else:
-    #     for data, sensor in data_generate(sensor_name):
-    #         if sensor_name == 'Relay':
-    #             relay_query.apply_async(args=[data, sensor.id], queue='relay')
-    #         else:
-    #             sensor_query.apply_async(args=[sensor_name, data, sensor.id], queue=sensor.tcp_config.ip+':'+str(sensor.tcp_config.port))
-
-    # L.info('data stored')

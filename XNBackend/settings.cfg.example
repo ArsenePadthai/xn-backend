@@ -34,19 +34,19 @@ CELERY_QUEUES = (
 )
 
 CELERY_ROUTES = {
-    'XNBackend.task.sensor.task.tasks_route':{"queue":"sensor", "routing_key":"sensor"},
-    'XNBackend.task.sensor.autoctrl.*':{"queue":"sensor", "routing_key":"sensor"},
-    'XNBackend.task.mantunsci.task.*':{"queue":"mantunsci", "routing_key":"mantunsci"},
-    'XNBackend.task.hik.task.*':{"queue":"hik", "routing_key":"hik"},
-    'XNBackend.task.hik.acs.face_recognition':{"queue":"196893"},
-    'XNBackend.task.hik.acs.door_control':{"queue":"198919"},
-    'XNBackend.task.hik.acs.door_destory':{"queue":"198657"},
+    'XNBackend.tasks.sensor.tasks.tasks_route':{"queue":"sensor", "routing_key":"sensor"},
+    'XNBackend.tasks.sensor.autoctrl.*':{"queue":"sensor", "routing_key":"sensor"},
+    'XNBackend.tasks.mantunsci.task.*':{"queue":"mantunsci", "routing_key":"mantunsci"},
+    'XNBackend.tasks.hik.tasks.*':{"queue":"hik", "routing_key":"hik"},
+    'XNBackend.tasks.hik.acs.face_recognition':{"queue":"196893"},
+    'XNBackend.tasks.hik.acs.door_control':{"queue":"198919"},
+    'XNBackend.tasks.hik.acs.door_destory':{"queue":"198657"},
 }
 
 
 CELERYBEAT_SCHEDULE = {
     "query_air_condition": {
-        'task': 'XNBackend.task.air_condition.task.periodic_query_air_condition',
+        'task': 'XNBackend.tasks.air_condition.task.periodic_query_air_condition',
         'schedule': crontab(minute='*/5'),
         'args': ()
     }

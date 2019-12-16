@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_compress import Compress
 from flask_log_request_id import RequestID
-from XNBackend.task import celery
+from XNBackend.tasks import celery
 from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
 from XNBackend.models import db, HeatMapSnapshots, Users, UserLogins, AppearRecords, \

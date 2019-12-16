@@ -1,10 +1,8 @@
 import json
-import requests
 import pytz
 from datetime import datetime
-from XNBackend.models import db, S3FC20, MantunciBox, EnergyConsumeByHour, EnergyConsumeDaily
-from XNBackend.task import logger
-from XNBackend.api_client.mantunsci import MantunsciAuthInMemory
+from XNBackend.models import db, S3FC20, MantunciBox, EnergyConsumeByHour, EnergyConsumeDaily, BoxAlarms
+from XNBackend.tasks import logger
 
 L = logger.getChild(__name__)
 
@@ -43,75 +41,61 @@ class S3FC20RealTimePower:
 
 
 class MantunsciBase:
-    def __init__(self, mac, auth_params):
+    def __init__(self, mac, id, mantunsci_req_session, router_uri, project_code):
         self.mac = mac
-        self.auth_params = auth_params
-        self.s = requests.Session()
-        self.s.auth = MantunsciAuthInMemory(
-            auth_params['auth_url'],
-            auth_params['username'],
-            auth_params['password'],
-            auth_params['app_key'],
-            auth_params['app_secret'],
-            auth_params['redirect_uri'],
-        )
+        self.mb_id = id
+        self.s = mantunsci_req_session
+        self.router_uri = router_uri
+        self.proj_code = project_code
+        self.records = []
 
     def data_requests(self, req_body):
-        r = self.s.post(self.auth_params['router_uri'], req_body)
+        r = self.s.post(self.router_uri, req_body)
         return r.json()
 
-    def load_data_from_response(self, mapping=None):
+    def load_data_from_response(self, *args, **kwargs):
         raise NotImplementedError
 
-    def save_data(self):
+    def save_data(self, *args):
         raise NotImplementedError
 
 
 class MantunsciRealTimePower(MantunsciBase):
-    def __init__(self, mac, auth_params, rds_client):
-        super(MantunsciRealTimePower, self).__init__(mac, auth_params)
+    def __init__(self, mac, id, mantunsci_req_session, router_uri, project_code, rds_client, req_body):
+        super(MantunsciRealTimePower, self).__init__(mac,
+                                                     id,
+                                                     mantunsci_req_session,
+                                                     router_uri,
+                                                     project_code)
         self.rds_client = rds_client
-        self.req_body = {
-            "method": "GET_BOX_CHANNELS_REALTIME",
-            "projectCode": self.auth_params['project_code'],
-            'mac': self.mac
-        }
-        self.s3fc20s = []
+        self.req_body = req_body
 
     def load_data_from_response(self, mapping=None):
         resp = self.data_requests(self.req_body)
-        if resp['code'] != '0':
-            return
-        else:
+        if resp['code'] == '0':
             for s in resp['data']:
                 mac_info = s['mac']
                 addr_info = s['addr']
                 if mapping.get(mac_info).get(addr_info):
-                    self.s3fc20s.append(S3FC20RealTimePower(s, mapping))
+                    self.records.append(S3FC20RealTimePower(s, mapping))
 
     def save_data(self):
-        for s in self.s3fc20s:
+        for s in self.records:
             s.save_to_rds(self.rds_client, '_')
 
 
 class ElectriConsumeHour(MantunsciBase):
-    def __init__(self, mac, auth_params, year, month, day, db_session, req_body):
-        super(ElectriConsumeHour, self).__init__(mac, auth_params)
-        self.year = year
-        self.month = month
-        self.day = day
-        self.req_body = req_body
-        self.consumption_record = []
-        self.db_session = db.session
-        self.tz_info = pytz.timezone('Asia/Shanghai')
+    tz_info = pytz.timezone('Asia/Shanghai')
 
-    def load_data_from_response(self, mapping=None):
-        resp = self.data_requests(self.req_body)
-        if resp['code'] != '0':
-            return []
-        else:
+    def load_data_from_response(self, req_body, mapping=None):
+        resp = self.data_requests(req_body)
+        year = req_body.get('year')
+        month = req_body.get('month')
+        day = req_body.get('day')
+
+        if resp['code'] == '0':
             for time_range in resp['data']:
-                happen_time = datetime(year=self.year, month=self.month, day=self.day, hour=int(time_range),
+                happen_time = datetime(year=year, month=month, day=day, hour=int(time_range),
                                        tzinfo=self.tz_info)
                 for entry in resp['data'][time_range]:
                     addr = entry['addr']
@@ -120,26 +104,27 @@ class ElectriConsumeHour(MantunsciBase):
                         record = EnergyConsumeByHour(s3_fc20_id=s3fc20.id,
                                                      updated_at=happen_time,
                                                      electricity=entry['electricity'])
-                        self.consumption_record.append(record)
-            return self.consumption_record
+                        self.records.append(record)
 
-    def save_data(self):
-        self.db_session.bulk_save_objects(self.consumption_record)
+    def save_data(self, db_session):
+        db_session.bulk_save_objects(self.records)
         try:
-            db.session.commit()
+            db_session.commit()
         except Exception as e:
             L.exception(e)
-            db.session.rollback()
+            db_session.rollback()
 
 
 class EnergyConsumeDay(ElectriConsumeHour):
 
-    def load_data_from_response(self, mapping=None):
-        resp = self.data_requests(self.req_body)
-        if resp['code'] != '0':
-            return []
-        else:
-            happen_time = datetime(year=self.year, month=self.month, day=self.day, tzinfo=self.tz_info)
+    def load_data_from_response(self, req_body, mapping=None):
+        year = req_body.get('year')
+        month = req_body.get('month')
+        day = req_body.get('day')
+        resp = self.data_requests(req_body)
+
+        if resp['code'] == '0':
+            happen_time = datetime(year=year, month=month, day=day, tzinfo=self.tz_info)
             for entry in resp['data']:
                 addr = entry['addr']
                 s3fc20 = S3FC20.query.filter(S3FC20.addr == addr).filter(S3FC20.box.has(mac=self.mac)).first()
@@ -147,6 +132,24 @@ class EnergyConsumeDay(ElectriConsumeHour):
                     record = EnergyConsumeDaily(s3_fc20_id=s3fc20.id,
                                                 updated_at=happen_time,
                                                 electricity=entry['electricity'])
-                    self.consumption_record.append(record)
-            return self.consumption_record
+                    self.records.append(record)
+
+
+class EnergyAlarm(ElectriConsumeHour):
+
+    def load_data_from_response(self, req_body, mapping=None):
+        resp = self.data_requests(req_body)
+        if resp['code'] == '0':
+            datas = resp['data']['datas']
+            for entry in datas:
+                b_a = BoxAlarms(id=int(entry['auto_id']),
+                                addr=int(entry['addr']),
+                                node=entry['node'],
+                                alarm_or_type=entry['type'],
+                                time=datetime.strptime(entry['time'], '%Y-%m-%d %H:%M'),
+                                info=entry['info'],
+                                type_number=entry.get('typeNumber'),
+                                box_id=self.mb_id
+                                )
+                self.records.append(b_a)
 

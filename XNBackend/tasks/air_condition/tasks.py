@@ -4,11 +4,10 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from flask import current_app
-from XNBackend.task import celery, logger
+from XNBackend.tasks import celery, logger
 from XNBackend.models import db, AirConditioner, IRSensors, MantunciBox
 from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
-from XNBackend.task.utils import MantunsciRealTimePower, \
-    ElectriConsumeHour, EnergyConsumeDay, get_mantunsci_addr_mapping
+from XNBackend.tasks.utils import ElectriConsumeHour, EnergyConsumeDay
 
 L = logger.getChild(__name__)
 
@@ -86,28 +85,6 @@ def periodic_update_ir_status():
 
 
 # TODO MOVE TO OTHER PLACES
-@celery.task()
-def periodic_realtime_power():
-    auth_param = {
-        'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
-        'username': current_app.config['MANTUNSCI_USERNAME'],
-        'password': current_app.config['MANTUNSCI_PASSWORD'],
-        'app_key': current_app.config['MANTUNSCI_APP_KEY'],
-        'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
-        'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI'],
-        'router_uri': current_app.config['MANTUNSCI_ROUTER_URI'],
-        'project_code': current_app.config['MANTUNSCI_PROJECT_CODE']
-    }
-    mapping = get_mantunsci_addr_mapping()
-
-    mbs = MantunciBox.query
-    R = redis.Redis(host=current_app.config['REDIS_HOST'], port=current_app.config['REDIS_PORT'])
-    for mb in mbs:
-        realtime_mb_power = MantunsciRealTimePower(mb.mac, auth_param, R)
-        realtime_mb_power.load_data_from_response(mapping)
-        realtime_mb_power.save_data()
-
-
 @celery.task()
 def periodic_electricity_usage_hour():
     """每天凌晨1点同步昨天的每小时耗电量"""

@@ -179,9 +179,6 @@ class MantunciBox(db.Model, TimeStampMixin):
     mac = db.Column(Unicode(length=MEDIUM_LEN), index=True)
     name = db.Column(String(SHORT_LEN))
     phone = db.Column(String(SHORT_LEN))
-    latest_alarm_id = db.Column(Integer, ForeignKey('box_alarms.id',
-                                                    ondelete='SET NULL'))
-    latest_alarm = relationship('BoxAlarms', foreign_keys=[latest_alarm_id])
     locator_id = db.Column(Unicode(length=MEDIUM_LEN),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
@@ -196,60 +193,12 @@ class S3FC20(db.Model, TimeStampMixin):
     box_id = db.Column(Integer, ForeignKey(MantunciBox.id,
                                            ondelete="SET NULL"))
     box = relationship('MantunciBox')
-    latest_record_id = db.Column(Integer, ForeignKey('s3_fc20_records.id',
-                                                     ondelete='SET NULL'))
-    latest_record = relationship(
-        'S3FC20Records', foreign_keys=[latest_record_id])
     # 0 means light, 1 means ac, 2 means power socket
     measure_type = db.Column(SmallInteger)
     locator_id = db.Column(Unicode(length=MEDIUM_LEN),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
     locator = relationship('Locators', foreign_keys=[locator_id])
-
-
-class S3FC20Records(db.Model, TimeStampMixin):
-    __tablename__ = 's3_fc20_records'
-    id = db.Column(Integer, primary_key=True)
-    s3_fc20_id = db.Column(Integer, ForeignKey(S3FC20.id,
-                                               ondelete='CASCADE'))
-    title = db.Column(String(MEDIUM_LEN))
-    validity = db.Column(BOOLEAN)
-    enable_netctr = db.Column(BOOLEAN)
-    oc = db.Column(BOOLEAN)
-    online = db.Column(BOOLEAN)
-    total_power = db.Column(Float)
-    mxgg = db.Column(Float)
-    mxgl = db.Column(Float)
-    line_type = db.Column(SmallInteger)
-    spec = db.Column(String(MEDIUM_LEN))
-    control = db.Column(BOOLEAN)
-    visibility = db.Column(BOOLEAN)
-    alarm = db.Column(Integer)
-    gLd = db.Column(Float)
-    gA = db.Column(Float)
-    gT = db.Column(Float)
-    gV = db.Column(Float)
-    gW = db.Column(Float)
-    gPF = db.Column(Float)
-    aA = db.Column(Float)
-    aT = db.Column(Float)
-    aV = db.Column(Float)
-    aW = db.Column(Float)
-    aPF = db.Column(Float)
-    bA = db.Column(Float)
-    bT = db.Column(Float)
-    bV = db.Column(Float)
-    bW = db.Column(Float)
-    bPF = db.Column(Float)
-    cA = db.Column(Float)
-    cT = db.Column(Float)
-    cV = db.Column(Float)
-    cW = db.Column(Float)
-    cPF = db.Column(Float)
-    nA = db.Column(Float)
-    nT = db.Column(Float)
-    s3_fc20 = relationship("S3FC20", foreign_keys=[s3_fc20_id])
 
 
 class BoxAlarms(db.Model, TimeStampMixin):

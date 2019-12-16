@@ -1,6 +1,6 @@
 import logging
 from flask_restful import Resource, reqparse
-from XNBackend.task.sensor.task import tasks_route
+from XNBackend.tasks.sensor.tasks import tasks_route
 from XNBackend.models import SwitchPanel, Switches, db
 from ..utils import query_panel_status, get_panel_client
 

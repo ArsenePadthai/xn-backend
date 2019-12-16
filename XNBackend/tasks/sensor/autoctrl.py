@@ -1,7 +1,7 @@
 import time
-from XNBackend.task import celery
-from .task import ir_query
-from XNBackend.models.models import db, AutoControllers 
+from XNBackend.tasks import celery
+from .tasks import ir_query
+from XNBackend.models.models import db, AutoControllers
 
 
 default_lux_value = 10000

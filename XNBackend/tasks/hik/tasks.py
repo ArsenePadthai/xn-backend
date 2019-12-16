@@ -1,7 +1,7 @@
 import requests
 from celery import group
 from hikvision_auth.auth import HIKVisionAuth
-from XNBackend.task import celery
+from XNBackend.tasks import celery
 from XNBackend.models.models import db, Users, TrackingDevices, AcsRecords, AppearRecords, HeatMapSnapshots
 
 
