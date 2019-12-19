@@ -11,9 +11,9 @@ from XNBackend.api_client.air_conditioner import get_ac_data
 
 L = logging.getLogger(__name__)
 
-SHORT_LEN = 30
-MEDIUM_LEN = 50
-LONG_LEN = 100
+SHORT_LEN_30 = 30
+MEDIUM_LEN_50 = 50
+LONG_LEN_100 = 100
 
 
 class TimeStampMixin:
@@ -35,28 +35,28 @@ class Users(db.Model, TimeStampMixin):
     __tablename__ = 'users'
     '''sync from hik'''
     id = db.Column(Integer, primary_key=True)
-    person_id = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    person_name = db.Column(Unicode(length=SHORT_LEN))
-    job_no = db.Column(String(MEDIUM_LEN))
+    person_id = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    person_name = db.Column(Unicode(length=SHORT_LEN_30))
+    job_no = db.Column(String(MEDIUM_LEN_50))
     gender = db.Column(SmallInteger)
-    org_path = db.Column(String(MEDIUM_LEN))
-    org_index_code = db.Column(String(MEDIUM_LEN))
-    org_name = db.Column(String(MEDIUM_LEN))
+    org_path = db.Column(String(MEDIUM_LEN_50))
+    org_index_code = db.Column(String(MEDIUM_LEN_50))
+    org_name = db.Column(String(MEDIUM_LEN_50))
     certificate_type = db.Column(Integer)
-    certificate_no = db.Column(String(MEDIUM_LEN))
-    phone_no = db.Column(String(SHORT_LEN))
-    address = db.Column(String(LONG_LEN))
-    email = db.Column(String(MEDIUM_LEN))
+    certificate_no = db.Column(String(MEDIUM_LEN_50))
+    phone_no = db.Column(String(SHORT_LEN_30))
+    address = db.Column(String(LONG_LEN_100))
+    email = db.Column(String(MEDIUM_LEN_50))
     education = db.Column(SmallInteger)
     nation = db.Column(SmallInteger)
-    photo_url = db.Column(String(LONG_LEN))
+    photo_url = db.Column(String(LONG_LEN_100))
 
 
 class UserLogins(db.Model, TimeStampMixin):
     __tablename__ = 'user_logins'
     id = db.Column(Integer, primary_key=True)
     user_id = db.Column(Integer, ForeignKey(Users.id, ondelete='CASCADE'))
-    username = db.Column(Unicode(length=MEDIUM_LEN))
+    username = db.Column(Unicode(length=MEDIUM_LEN_50))
     password = db.Column(String(200))
     level = db.Column(SmallInteger)
     user_ref = relationship('Users', backref='user_logins')
@@ -81,8 +81,8 @@ class UserLogins(db.Model, TimeStampMixin):
 
 class Locators(db.Model, TimeStampMixin):
     __tablename__ = 'locators'
-    internal_code = db.Column(Unicode(length=MEDIUM_LEN), primary_key=True)
-    description = db.Column(String(LONG_LEN))
+    internal_code = db.Column(Unicode(length=MEDIUM_LEN_50), primary_key=True)
+    description = db.Column(String(LONG_LEN_100))
     floor = db.Column(Integer)
     zone = db.Column(Integer)
     # coorX, coorY and coorZ may not necessary
@@ -94,7 +94,7 @@ class Locators(db.Model, TimeStampMixin):
 class TcpConfig(db.Model, TimeStampMixin):
     __tablename__ = 'tcp_config'
     id = db.Column(Integer, primary_key=True)
-    ip = db.Column(String(MEDIUM_LEN))
+    ip = db.Column(String(MEDIUM_LEN_50))
     port = db.Column(Integer)
     desc = db.Column(String(100))
 
@@ -102,9 +102,9 @@ class TcpConfig(db.Model, TimeStampMixin):
 class TrackingDevices(db.Model, TimeStampMixin):
     __tablename__ = 'tracking_devices'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    name = db.Column(String(MEDIUM_LEN))
-    locator = db.Column(Unicode(length=MEDIUM_LEN),
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    name = db.Column(String(MEDIUM_LEN_50))
+    locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     # 0 means camera, 1 means acs
@@ -125,30 +125,30 @@ class AcsRecords(db.Model, TimeStampMixin):
     # status =1 means open status=0 means closing
     status = db.Column(SmallInteger)
     event_type = db.Column(Integer)
-    event_id = db.Column(Unicode(length=LONG_LEN))
+    event_id = db.Column(Unicode(length=LONG_LEN_100))
     acs = relationship('TrackingDevices', foreign_keys=[acs_id])
 
 
 class Door(db.Model, TimeStampMixin):
     __tablename__ = "door"
-    door_index_code = db.Column(Unicode(length=LONG_LEN), primary_key=True)
+    door_index_code = db.Column(Unicode(length=LONG_LEN_100), primary_key=True)
     status = db.Column(SmallInteger)
-    room_no_internal = db.Column(Unicode(length=LONG_LEN))
-    room_no_external = db.Column(Unicode(length=LONG_LEN))
-    desc = db.Column(Unicode(length=LONG_LEN))
+    room_no_internal = db.Column(Unicode(length=LONG_LEN_100))
+    room_no_external = db.Column(Unicode(length=LONG_LEN_100))
+    desc = db.Column(Unicode(length=LONG_LEN_100))
 
 
 class AppearRecords(db.Model, TimeStampMixin):
     __tablename__ = 'appear_records'
     id = db.Column(Integer, primary_key=True)
     faceId = db.Column(Integer)
-    name = db.Column(Unicode(length=MEDIUM_LEN))
-    sex = db.Column(Unicode(length=SHORT_LEN))
-    certificateType = db.Column(Unicode(length=LONG_LEN))
-    certificateNum = db.Column(Unicode(length=LONG_LEN))
+    name = db.Column(Unicode(length=MEDIUM_LEN_50))
+    sex = db.Column(Unicode(length=SHORT_LEN_30))
+    certificateType = db.Column(Unicode(length=LONG_LEN_100))
+    certificateNum = db.Column(Unicode(length=LONG_LEN_100))
     facePicture = db.Column(Unicode(length=300))
-    cameraIndexCode = db.Column(Unicode(length=LONG_LEN))
-    deviceName = db.Column(Unicode(length=LONG_LEN))
+    cameraIndexCode = db.Column(Unicode(length=LONG_LEN_100))
+    deviceName = db.Column(Unicode(length=LONG_LEN_100))
     eventType = db.Column(Integer)
     happenTime = db.Column(TIMESTAMP)
 
@@ -176,10 +176,10 @@ class HeatMapSnapshots(db.Model, TimeStampMixin):
 class MantunciBox(db.Model, TimeStampMixin):
     __tablename__ = 'mantunci_box'
     id = db.Column(Integer, primary_key=True)
-    mac = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    name = db.Column(String(SHORT_LEN))
-    phone = db.Column(String(SHORT_LEN))
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+    mac = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    name = db.Column(String(SHORT_LEN_30))
+    phone = db.Column(String(SHORT_LEN_30))
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN_50),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
     locator = relationship('Locators', foreign_keys=[locator_id])
@@ -189,13 +189,13 @@ class S3FC20(db.Model, TimeStampMixin):
     __tablename__ = 's3_fc20'
     id = db.Column(Integer, primary_key=True)
     addr = db.Column(Integer)
-    desc = db.Column(Unicode(LONG_LEN))
+    desc = db.Column(Unicode(LONG_LEN_100))
     box_id = db.Column(Integer, ForeignKey(MantunciBox.id,
                                            ondelete="SET NULL"))
     box = relationship('MantunciBox')
     # 0 means light, 1 means ac, 2 means power socket
     measure_type = db.Column(SmallInteger)
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN_50),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
     locator = relationship('Locators', foreign_keys=[locator_id])
@@ -208,9 +208,9 @@ class BoxAlarms(db.Model, TimeStampMixin):
                                            ondelete='CASCADE'),
                        nullable=False)
     addr = db.Column(Integer)
-    node = db.Column(String(MEDIUM_LEN))
-    alarm_or_type = db.Column(String(SHORT_LEN))
-    info = db.Column(String(MEDIUM_LEN))
+    node = db.Column(String(MEDIUM_LEN_50))
+    alarm_or_type = db.Column(String(SHORT_LEN_30))
+    info = db.Column(String(MEDIUM_LEN_50))
     type_number = db.Column(SmallInteger)
     time = db.Column(TIMESTAMP)
     box = relationship('MantunciBox', foreign_keys=[box_id])
@@ -275,7 +275,7 @@ class IRSensors(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     batch_no = db.Column(db.Integer)
     addr_no = db.Column(db.Integer)
-    locator = db.Column(Unicode(length=MEDIUM_LEN),
+    locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     # latest_record_id = db.Column(Integer,
@@ -310,8 +310,8 @@ class AQIValues(db.Model, TimeStampMixin):
 class AQISensors(db.Model, TimeStampMixin):
     __tablename__ = 'aqi_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN),
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(AQIValues.id,
@@ -346,7 +346,7 @@ class LuxSensors(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     batch_no = db.Column(db.Integer)
     addr_no = db.Column(db.Integer)
-    locator = db.Column(Unicode(length=MEDIUM_LEN),
+    locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey(LuxValues.id,
@@ -378,8 +378,8 @@ class FireAlarmStatus(db.Model, TimeStampMixin):
 class FireAlarmSensors(db.Model, TimeStampMixin):
     __tablename__ = 'fire_alarm_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN),
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     latest_record_id = db.Column(Integer,
@@ -395,13 +395,13 @@ class SwitchPanel(db.Model, TimeStampMixin):
     id = db.Column(Integer, primary_key=True)
     batch_no = db.Column(db.Integer)
     addr_no = db.Column(db.Integer)
-    desc = db.Column(Unicode(length=LONG_LEN))
+    desc = db.Column(Unicode(length=LONG_LEN_100))
     # when panel_type is 0 means four control, when panel_type is 1 means double control
     panel_type = db.Column(SmallInteger)
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN_50),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
     locator = relationship('Locators')
@@ -440,13 +440,13 @@ class Switches(db.Model, TimeStampMixin):
 class Relay(db.Model, TimeStampMixin):
     __tablename__ = 'relay'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
     addr = db.Column(Integer)
     channel = db.Column(Integer)
     switch_id = db.Column(Integer, ForeignKey('switches.id',
                                               ondelete='SET NULL'))
     switch = relationship('Switches', foreign_keys=[switch_id], backref='belong_relays')
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN),
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN_50),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))
     locator = relationship('Locators')
@@ -476,8 +476,8 @@ class ElevatorStatus(db.Model, TimeStampMixin):
 class Elevators(db.Model, TimeStampMixin):
     __tablename__ = 'elevators'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), index=True)
-    locator = db.Column(Unicode(length=MEDIUM_LEN),
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
     latest_record_id = db.Column(Integer, ForeignKey('elevator_status.id',
@@ -518,15 +518,15 @@ class AutoControllers(db.Model, TimeStampMixin):
 
 class AirConditioner(db.Model, TimeStampMixin):
     __tablename__ = 'air_conditioner'
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN), primary_key=True)
+    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), primary_key=True)
     desired_speed = db.Column(Integer)
     if_online = db.Column(SmallInteger)
     desired_mode = db.Column(SmallInteger)
     temperature = db.Column(Integer)
     ac_on = db.Column(SmallInteger)
     desired_temperature = db.Column(SmallInteger)
-    locator_id = db.Column(Unicode(length=MEDIUM_LEN), ForeignKey(Locators.internal_code,
-                                                                  ondelete='SET NULL'))
+    locator_id = db.Column(Unicode(length=MEDIUM_LEN_50), ForeignKey(Locators.internal_code,
+                                                                     ondelete='SET NULL'))
     locator = relationship('Locators')
 
     @staticmethod
@@ -569,3 +569,18 @@ class AirConditioner(db.Model, TimeStampMixin):
     def update_values(self):
         ret = get_ac_data([self.device_index_code])
         self.apply_values(ret['data'][0])
+
+
+class UniAlarms(db.Model, TimeStampMixin):
+    __tablename__ = 'uni_alarms'
+    internal_id = db.Column(Integer, primary_key=True)
+    external_id = db.Column(Unicode(length=SHORT_LEN_30))
+    happen_time = db.Column(TIMESTAMP)
+    alarm_group = db.Column(SmallInteger)
+    alarm_code = db.Column(Integer)
+    alarm_content = db.Column(Unicode(length=LONG_LEN_100))
+    room = db.Column(Unicode(length=10))
+    floor = db.Column(Integer)
+    extra = db.Column(Unicode(length=200))
+    # 0 means confirmed, 1 means not confirm
+    active = db.Column(SmallInteger)

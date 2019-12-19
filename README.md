@@ -80,6 +80,7 @@ the server will take certain actions.
 
 
 
+### blueprint make alarm service as microservice
 
 
 
