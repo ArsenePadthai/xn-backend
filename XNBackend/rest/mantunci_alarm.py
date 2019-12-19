@@ -1,87 +1,71 @@
+# -*- coding: utf-8 -*-
 from flask_restful import Resource, reqparse
-from datetime import datetime, timedelta
-from XNBackend.models import BoxAlarms, MantunciBox
+from datetime import datetime
+from XNBackend.models import BoxAlarms
 
-parser = reqparse.RequestParser()
-parser.add_argument('startTime',
-                    type=str,
-                    required=False,
-                    help='please provide correct start time, example: 20190830T100000')
-
-parser.add_argument('endTime',
-                    type=str,
-                    required=False,
-                    help='please provide correct end time, example: 20190830T100000')
-
-
-def count_alarm(enties):
-    short_circuit = len(list(
-        filter(lambda x: x.type_number == 2, enties)
-    ))
-    leak = len(list(
-        filter(lambda x: x.type_number == 3, enties)
-    ))
-    over_heat = len(list(
-        filter(lambda x: x.type_number == 7, enties)
-    ))
-    surge = len(list(
-        filter(lambda x: x.type_number == 8, enties)
-    ))
-    more_less_vol = len(list(
-        filter(lambda x: (x.type_number == 5 or x.type_number == 6), enties)
-    ))
-    over_load = len(list(
-        filter(lambda x: x.type_number == 4, enties)
-    ))
-    circuit_fire = len(list(
-        filter(lambda x: x.type_number == 11, enties)
-    ))
-    return {
-        'short_circuit': short_circuit,
-        'leak': leak,
-        'over_heat': over_heat,
-        'surge': surge,
-        'more_less_vol': more_less_vol,
-        'over_load': over_load,
-        'circuit_fire': circuit_fire
-    }
+alarm_query_parser = reqparse.RequestParser()
+alarm_query_parser.add_argument('start',
+                                type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
+                                required=False,
+                                help='please provide correct start time, example: 2019-08-30T10:00:00')
+alarm_query_parser.add_argument('end',
+                                type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
+                                required=False,
+                                help='please provide correct end time, example: 2019-08-30T10:00:00')
+alarm_query_parser.add_argument("pageNo",
+                                type=int,
+                                required=False,
+                                help="please provide correct page no")
+alarm_query_parser.add_argument('perPage',
+                                type=int,
+                                required=False,
+                                help="please provide correct perPage")
 
 
 class MantunciBoxAlarm(Resource):
+    def get_alarm_summary(self, items):
+        alarm_count = [0] * 17
+        ret = {}
+
+        for alarm in items:
+            type_number = alarm.type_number
+            alarm_count[type_number] += 1
+
+        alarm_type = ["unknown",
+                      "short_circuit",
+                      "leak",
+                      "over_load",
+                      "over_flow",
+                      "over_voltage",
+                      "lack_voltage",
+                      "temp_alarm",
+                      "surge",
+                      "leak_protection_ok",
+                      "leak_protection_undo",
+                      "circuit_fire",
+                      "leak_warn",
+                      "circuit_warn",
+                      "over_vol_warn",
+                      "lack_vol_warn",
+                      "connect_warn"]
+        for a in range(len(alarm_type)):
+            ret[alarm_type[a]] = alarm_count[a]
+        return ret
+
     def get(self):
-        # TODO allow customized startTime and endTime in request parameter
-        end_time = datetime.utcnow()
-        start_time = datetime.utcnow() - timedelta(days=7)
-        # TODO ADD COMPARE
-        # if start_time > end_time:
-        #     abort(400)
-        query_all = BoxAlarms.query.filter(
-            BoxAlarms.time > start_time
-        ).filter(
-            BoxAlarms.time < end_time
-        )
+        args = alarm_query_parser.parse_args()
+        start = args.get('start')
+        end = args.get('end')
+        page_no = args.get('pageNo')
+        perPage = args.get('perPage')
+        if start and end and start >= end:
+            return {"code": -1, "message": "start time should be earlier than end time"}
 
-        ret_all = query_all.all()
+        query = BoxAlarms.query
+        if start:
+            query = query.filter(BoxAlarms.time > start)
+        if end:
+            query = query.filter(BoxAlarms.time < end)
+        query = query.paginate(page_no, perPage, error_out=True).items
+        return self.get_alarm_summary(query)
 
-        def query_xf(floor):
-            box_ids = MantunciBox.query.filter(MantunciBox.locator.has(floor=3)).all()
-            box_ids = [i.id for i in box_ids]
-            ret = BoxAlarms.query.filter(BoxAlarms.box_id.in_(box_ids))
-            return count_alarm(ret)
-
-        return {
-            'total': count_alarm(ret_all),
-            '3f': query_xf(3),
-            '4f': query_xf(4),
-            '5f': query_xf(5),
-            '6f': query_xf(6),
-            '7f': {
-                'short_circuit': 0,
-                'leak': 0,
-                'over_heat': 0,
-                'surge': 0,
-                'more_less_vol': 0,
-                'over_load': 0,
-                'circuit_fire': 0
-            }
-        }

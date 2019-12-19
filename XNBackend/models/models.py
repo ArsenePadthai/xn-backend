@@ -415,7 +415,7 @@ class Switches(db.Model, TimeStampMixin):
                                 ForeignKey('switch_panel.id',
                                            ondelete='SET NULL'))
     status = db.Column(SmallInteger)
-    switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id])
+    switch_panel = relationship('SwitchPanel', foreign_keys=[switch_panel_id], backref='belong_switches')
     desc = db.Column(String(100))
 
     @property
@@ -445,7 +445,7 @@ class Relay(db.Model, TimeStampMixin):
     channel = db.Column(Integer)
     switch_id = db.Column(Integer, ForeignKey('switches.id',
                                               ondelete='SET NULL'))
-    switch = relationship('Switches', foreign_keys=[switch_id])
+    switch = relationship('Switches', foreign_keys=[switch_id], backref='belong_relays')
     locator_id = db.Column(Unicode(length=MEDIUM_LEN),
                            ForeignKey(Locators.internal_code,
                                       ondelete='SET NULL'))

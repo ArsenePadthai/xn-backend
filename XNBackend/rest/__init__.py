@@ -7,13 +7,14 @@ from .energy import Energy, EnergyShow
 from .env import Env
 from .device import Device
 from .room import Room
-from .sensor import FireDetector, IRSensor, Elevator, Camera, Light, FaceRecognition
+from .sensor import FireDetector, IRSensor, Elevator, Light, FaceRecognition
 from .callback import AcsCallback
 from .air_condition import AirConditionControl, AirCondition
 from .aqi import AQISensor
 from .notification import NotificationApi
 from .electric_consume import ElectricConsumeByDay, ElectricConsumeByMonth
 from .appear_records import AppearRecordsApi
+from .floor_control import FloorControl
 
 api = Api(dashboard_api_bp)
 
@@ -31,7 +32,6 @@ api.add_resource(AirCondition, '/api/dashboard/air_condition')
 api.add_resource(FireDetector, '/api/dashboard/fire_detector')
 api.add_resource(IRSensor, '/api/dashboard/ir_sensors')
 api.add_resource(Elevator, '/api/dashboard/elevator')
-api.add_resource(Camera, '/api/dashboard/cameres')
 api.add_resource(Light, '/api/dashboard/lights')
 api.add_resource(FaceRecognition, '/api/dashboard/faceRecog')
 api.add_resource(Acs, '/api/dashboard/acs')
@@ -45,5 +45,6 @@ api.add_resource(NotificationApi, '/api/dashboard/notification')
 api.add_resource(ElectricConsumeByDay, '/api/dashboard/electric_consume_day')
 api.add_resource(ElectricConsumeByMonth, '/api/dashboard/electric_consume_month')
 api.add_resource(AppearRecordsApi, '/api/dashboard/appear_records')
+api.add_resource(FloorControl, '/api/dashboard/floor_control')
 
 

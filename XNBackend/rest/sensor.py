@@ -1,8 +1,8 @@
 from flask_restful import Resource, reqparse, fields, marshal_with
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import current_app
-from XNBackend.models import IRSensors, TrackingDevices, AppearRecords, \
-    LuxSensors, FireAlarmSensors, Elevators, Relay, AirConditioner, Switches, SwitchPanel
+from XNBackend.models import IRSensors, AppearRecords, Elevators, \
+    Relay, Switches, SwitchPanel
 from .utils import MyDateTime
 
 
@@ -38,34 +38,53 @@ appear_fields = {
 }
 
 
+def if_time_expired(the_time, check_range=timedelta(minutes=-5)):
+    now = datetime.now()
+    valid_boundary = now + check_range
+    return the_time > valid_boundary
+
+
+def check_occupied(ir_sensor_list):
+    if not ir_sensor_list:
+        return None
+    if None in ir_sensor_list:
+        return -1
+    if 1 in ir_sensor_list:
+        return 1
+    return 0
+
+
 def check_ir(floor):
-    floor_map = {
-        3: range(301, 325),
-        4: range(401, 428),
-        5: range(501, 523),
-        6: range(601, 630),
-        7: range(701, 730),
-        9: range(901, 905),
-    }
+    floor_map = current_app.config['FLOOR_ROOM_MAPPING']
     sensors = IRSensors.query.filter(IRSensors.locator_body.has(floor=floor)).all()
+    status_dict = {}
+    detail = {}
     room_range = floor_map[floor]
-    status_dict = dict()
     for room in room_range:
-        status_dict[room] = -1
+        status_dict[room] = []
 
     occupied = 0
-    empty = 0
     error = 0
-    for i in sensors:
-        if i.status == 1:
+
+    for s in sensors:
+        room_no = s.locator_body.zone
+        if not (s.updated_at and if_time_expired(s.updated_at)):
+            # throw ugly
+            status_dict[room_no].append(None)
+        else:
+            status_dict[room_no].append(s.status)
+
+    for room in status_dict:
+        status = check_occupied(status_dict[room])
+        if status == 1:
             occupied += 1
-            status_dict[i.locator_body.zone] = 1
-        elif i.status == 0:
-            empty += 1
-            status_dict[i.locator_body.zone] = 0
-        elif i.status is None:
+        elif status == -1:
             error += 1
-    return occupied, empty, error, status_dict
+        elif status is None:
+            continue
+        detail[room] = status
+
+    return len(detail), error, occupied, detail
 
 
 def return_room_status(floor, status):
@@ -95,13 +114,14 @@ class IRSensor(Resource):
         floor_map = current_app.config['FLOOR_ROOM_MAPPING']
         if int(floor) not in floor_map:
             return {'code': -1, "errorMsg": "floor out of range"}
-        occupied, empty, error, status = check_ir(floor)
+        total, error, occupied, detail = check_ir(floor)
 
         return {
-            "total": occupied + empty,
-            "empty": empty,
+            "total": total,
+            "empty": total - error - occupied,
             "occupied": occupied,
-            "detail": status
+            "error": error,
+            "detail": detail
         }
 
 
@@ -137,36 +157,10 @@ class Elevator(Resource):
         }
 
 
-class Camera(Resource):
-    def get(self):
-        TRACKING_CAM = 0
-        TRACKING_ACS = 1
-        floor = floor_parser.parse_args().get('floor')
-        # cam_count = TrackingDevices.query.filter(TrackingDevices.locator_body.has(floor=floor)).filter(TrackingDevices.device_type == TRACKING_CAM)
-        cam_count = 100
-        ai_cam_count = 40
-        details = dict()
-        for i in range(24):
-            details['%d%s' % (floor, str(i + 1).zfill(2))] = "192.168.%d.%d/trsp" % (floor, i + 1)
-        return {
-            "total": cam_count,
-            "normal": cam_count - ai_cam_count,
-            "ai": ai_cam_count,
-            "detail": details
-        }
-
-
 class Light(Resource):
     def get(self):
         floor = floor_parser.parse_args().get('floor')
-        floor_map = {
-            3: range(301, 325),
-            4: range(401, 428),
-            5: range(501, 523),
-            6: range(601, 630),
-            7: range(701, 730),
-            9: range(901, 905),
-        }
+        floor_map = current_app.config['FLOOR_ROOM_MAPPING']
 
         status_dict = dict()
         main_count = 0
@@ -190,7 +184,8 @@ class Light(Resource):
 
             aux_channel_no = 2 if panel.panel_type == 1 else 4
             aux_switch = switch.filter(Switches.channel == aux_channel_no).first()
-            if aux_switch:
+            # 513/515 is restroom
+            if aux_switch and panel.locator_id != "513" and panel.locator_id != "515":
                 rel = Relay.query.filter(Relay.switch_id == aux_switch.id).first()
                 if rel and getattr(aux_switch, 'status', None) in [0, 1]:
                     status_dict[str(room)].append(aux_switch.status)

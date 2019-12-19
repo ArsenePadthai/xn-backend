@@ -1,7 +1,7 @@
 from flask_restful import Resource, reqparse
 from flask import current_app
 from XNBackend.models import AirConditioner
-from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition
+from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition, update_specific_air_condition
 
 ac_patch_parser = reqparse.RequestParser()
 ac_patch_parser.add_argument('device_index_code', required=True, type=str, 
@@ -47,6 +47,9 @@ class AirConditionControl(Resource):
         send_cmd_to_air_condition.apply_async(args=[device_index_code],
                                               kwargs=kwarg_control,
                                               queue="general")
+        update_specific_air_condition.apply_async(args=[device_index_code],
+                                                  queue='general',
+                                                  countdown=10)
         return {'errMsg': 'ok'}
 
 

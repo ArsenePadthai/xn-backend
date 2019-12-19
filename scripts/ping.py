@@ -13,16 +13,15 @@ def test_ping(ip_addr):
             L.exception('ping pong failed')
         time.sleep(40)
 
+
 def batch_ping():
     t_queue = []
     for i in range(1, 91):
         t_queue.append(Thread(target = test_ping, args=(i,)))
     for t in t_queue:
         t.start()
-        #t.join()
 
         
 
 if __name__ == '__main__':
-#    test_ping(1)
     batch_ping()

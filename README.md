@@ -57,12 +57,26 @@ pipenv run flask run
 * 重新执行```alembic upgrade head```
 
 
-# 设计相关
+## 设计相关
 
-## 卓岚设备
+### 卓岚设备
 ### 卓岚设备对接控灯面板， 同时也对接红外传感器
 
-### update 2019.12.02 决定对于红外设备，不采用latest_record_id, 删除IRSensorStatus这张表, 以及删除IRSensors中的column (latest_record_id, latest_record)
+update 2019.12.02 决定对于红外设备，不采用latest_record_id, 删除IRSensorStatus这张表, 以及删除IRSensors中的column (latest_record_id, latest_record)
+
+### ECO Design Memo
+#### Definition
+1. There are two modes under ECO mode. One is work mode, the other is off-work mode. 
+If current time is *between 8:00 and 17:00*, it is under work mode. If current time 
+is out of previous time range, it is off work mode.
+
+2. Under ECO mode, if certain conditions are satisfied (will be defined below), 
+the server will take certain actions. 
+```For work mode, actions will be turning off main light and set air condition to fan mode.```
+```For off work mode, actions will be turning both main light and aux light off, and setting air condition to fan mode.```
+
+3. How to set ECO mode?
+
 
 
 

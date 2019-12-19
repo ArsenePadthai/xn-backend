@@ -64,8 +64,7 @@ class LightControl(Resource):
             client.close()
             return {'errMsg': 'failed to send cmd to panel'}
 
-        tasks_route.delay('LocatorControl', channel, is_open, zone=room_no)
-        tasks_route.apply_async(args=['LocatorControl', channel, is_open],
-                                kwargs={'zone': room_no},
-                                queue='general')
+        # tasks_route.apply_async(args=['LocatorControl', channel, is_open],
+        #                         kwargs={'zone': room_no},
+        #                         queue='general')
         return {'errMsg': 'ok'}

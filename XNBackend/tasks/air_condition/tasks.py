@@ -1,13 +1,11 @@
-import redis
 import socket
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from flask import current_app
 from XNBackend.tasks import celery, logger
 from XNBackend.models import db, AirConditioner, IRSensors, MantunciBox
 from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
-from XNBackend.tasks.utils import ElectriConsumeHour, EnergyConsumeDay
 
 L = logger.getChild(__name__)
 
@@ -39,6 +37,19 @@ def periodic_query_air_condition():
 def send_cmd_to_air_condition(device_index_code: str, **kwarg):
     ret = set_ac_data(device_index_code, **kwarg)
     return 0 if ret.get('errMsg') == 'ok' else 1
+
+
+@celery.task()
+def update_specific_air_condition(device_index_code):
+    resp = get_ac_data([device_index_code])
+    if resp['errCode'] == 0:
+        device_data = resp['data'][0]
+        ac = AirConditioner.query.filter(AirConditioner.device_index_code == device_index_code).first()
+        ac.apply_values(device_data)
+        db.session.commit()
+        return {"code": 0, "message": "ok"}
+    else:
+        L.error(f'failed to get ac data for device index code {device_index_code}')
 
 
 # TODO MOVE TO IR section
@@ -84,64 +95,3 @@ def periodic_update_ir_status():
     L.error(wrong_list)
 
 
-# TODO MOVE TO OTHER PLACES
-@celery.task()
-def periodic_electricity_usage_hour():
-    """每天凌晨1点同步昨天的每小时耗电量"""
-    auth_param = {
-        'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
-        'username': current_app.config['MANTUNSCI_USERNAME'],
-        'password': current_app.config['MANTUNSCI_PASSWORD'],
-        'app_key': current_app.config['MANTUNSCI_APP_KEY'],
-        'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
-        'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI'],
-        'router_uri': current_app.config['MANTUNSCI_ROUTER_URI'],
-        'project_code': current_app.config['MANTUNSCI_PROJECT_CODE']
-    }
-    mbs = MantunciBox.query
-    session = db.session
-    current_time = datetime.now() + timedelta(days=-1)
-    for mb in mbs:
-        req_body = {
-            "method": "GET_BOX_HOUR_POWER",
-            "projectCode": auth_param['project_code'],
-            'mac': mb.mac,
-            'year': current_time.year,
-            'month': current_time.month,
-            'day': current_time.day
-        }
-        elec_hour = ElectriConsumeHour(mb.mac, auth_param, current_time.year,
-                                       current_time.month, current_time.day, session, req_body)
-        elec_hour.load_data_from_response()
-        elec_hour.save_data()
-
-
-@celery.task()
-def periodic_electricity_usage_day():
-    """每天凌晨获取前一天的日消耗"""
-    auth_param = {
-        'auth_url': current_app.config['MANTUNSCI_AUTH_URL'],
-        'username': current_app.config['MANTUNSCI_USERNAME'],
-        'password': current_app.config['MANTUNSCI_PASSWORD'],
-        'app_key': current_app.config['MANTUNSCI_APP_KEY'],
-        'app_secret': current_app.config['MANTUNSCI_APP_SECRET'],
-        'redirect_uri': current_app.config['MANTUNSCI_REDIRECT_URI'],
-        'router_uri': current_app.config['MANTUNSCI_ROUTER_URI'],
-        'project_code': current_app.config['MANTUNSCI_PROJECT_CODE']
-    }
-    mbs = MantunciBox.query
-    session = db.session
-    current_time = datetime.now() + timedelta(days=-1)
-    for mb in mbs:
-        req_body = {
-            "method": "GET_BOX_DAY_POWER",
-            "projectCode": auth_param['project_code'],
-            'mac': mb.mac,
-            'year': current_time.year,
-            'month': current_time.month,
-            'day': current_time.day
-        }
-        elec_day = EnergyConsumeDay(mb.mac, auth_param, current_time.year,
-                                    current_time.month, current_time.day, session, req_body)
-        elec_day.load_data_from_response()
-        elec_day.save_data()
