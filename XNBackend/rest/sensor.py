@@ -1,3 +1,5 @@
+import time
+import json
 from flask_restful import Resource, reqparse, fields, marshal_with
 from datetime import datetime, timedelta
 from flask import current_app
@@ -38,10 +40,9 @@ appear_fields = {
 }
 
 
-def if_time_expired(the_time, check_range=timedelta(minutes=-5)):
-    now = datetime.now()
-    valid_boundary = now + check_range
-    return the_time > valid_boundary
+def if_time_expired(the_time, check_range=1200):
+    now = int(time.time())
+    return the_time > now - check_range
 
 
 def check_occupied(ir_sensor_list):
@@ -55,34 +56,43 @@ def check_occupied(ir_sensor_list):
 
 
 def check_ir(floor):
-    floor_map = current_app.config['FLOOR_ROOM_MAPPING']
-    sensors = IRSensors.query.filter(IRSensors.locator_body.has(floor=floor)).all()
-    status_dict = {}
-    detail = {}
-    room_range = floor_map[floor]
-    for room in room_range:
-        status_dict[room] = []
-
     occupied = 0
     error = 0
-
-    for s in sensors:
-        room_no = s.locator_body.zone
-        if not (s.updated_at and if_time_expired(s.updated_at)):
-            # throw ugly
-            status_dict[room_no].append(None)
-        else:
-            status_dict[room_no].append(s.status)
-
-    for room in status_dict:
-        status = check_occupied(status_dict[room])
-        if status == 1:
-            occupied += 1
-        elif status == -1:
+    floor_map = current_app.config['FLOOR_ROOM_MAPPING']
+    detail = {}
+    room_range = floor_map[floor]
+    import redis
+    R = redis.Redis(host=current_app.config['REDIS_HOST'],
+                    port=current_app.config['REDIS_PORT'])
+    for room in room_range:
+        value = R.get('IR_'+str(room))
+        # exclude power room, networking room, restrooms
+        if not value and room not in ['304',
+                                      '313',
+                                      '315',
+                                      '317',
+                                      '404',
+                                      '418',
+                                      '420',
+                                      '422',
+                                      '504',
+                                      '511',
+                                      '513',
+                                      '515',
+                                      '604',
+                                      '618',
+                                      '620',
+                                      '622',
+                                      '721']:
+            detail[room] = -1
             error += 1
-        elif status is None:
-            continue
-        detail[room] = status
+        else:
+            value = json.loads(value)
+            if 1 in value:
+                detail[room] = 1
+                occupied += 1
+            else:
+                detail[room] = 0
 
     return len(detail), error, occupied, detail
 

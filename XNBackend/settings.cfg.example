@@ -4,16 +4,19 @@ from kombu import Exchange, Queue
 
 DEBUG=True
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379'
+CELERY_BROKER_URL = 'redis://127.0.0.1:63379'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:63379'
 
 WTF_CSRF_SECRET_KEY = SECRET_KEY = 'aaaabbbccddefg'
 
+
+JWT_TOKEN_LOCATION='cookies'
 JWT_SECRET_KEY='qazxcvbnmklpoiuytrewsdfghjk'
 JWT_AUTH_URL_RULE=None
 JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=7)
 
-SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://test:test@127.0.0.1:3306/xn?charset=utf8mb4'
+# SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://xn:Pass1234@10.100.101.199:3306/xn?charset=utf8mb4'
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://test:test@127.0.0.1:33306/xn?charset=utf8mb4'
 SQLALCHEMY_TRACK_MODIFICATIONS=False
 
 JWT_EXPIRATION_DELTA = timedelta(seconds=60*60*24)
@@ -23,39 +26,20 @@ LOG_DIR = './'
 BUNDLE_ERRORS = True
 MAX_CONTENT_LENGTH = 16*1024*1024
 
-first_exchange = Exchange('sensor', type='direct')
-second_exchange = Exchange('mantunsci', type='direct')
-third_exchange = Exchange('hik', type='direct')
-
-CELERY_QUEUES = (
-	Queue(name='sensor', exchange=first_exchange, routing_key='sensor'),
-	Queue(name='mantunsci', exchange=second_exchange, routing_key='mantunsci'),
-	Queue(name='hik', exchange=third_exchange, routing_key='hik')
-)
-
-CELERY_ROUTES = {
-    'XNBackend.tasks.sensor.tasks.tasks_route':{"queue":"sensor", "routing_key":"sensor"},
-    'XNBackend.tasks.sensor.autoctrl.*':{"queue":"sensor", "routing_key":"sensor"},
-    'XNBackend.tasks.mantunsci.task.*':{"queue":"mantunsci", "routing_key":"mantunsci"},
-    'XNBackend.tasks.hik.tasks.*':{"queue":"hik", "routing_key":"hik"},
-    'XNBackend.tasks.hik.acs.face_recognition':{"queue":"196893"},
-    'XNBackend.tasks.hik.acs.door_control':{"queue":"198919"},
-    'XNBackend.tasks.hik.acs.door_destory':{"queue":"198657"},
-}
+low_exchange = Exchange('first', type='direct')
+high_exchange = Exchange('second', type='direct')
 
 
 CELERYBEAT_SCHEDULE = {
     "query_air_condition": {
-        'task': 'XNBackend.tasks.air_condition.task.periodic_query_air_condition',
+        'task': 'XNBackend.tasks.air_condition.tasks.periodic_query_air_condition',
         'schedule': crontab(minute='*/5'),
         'args': ()
     }
 }
 
-CELERY_REJECT_ON_WORKER_LOST = True
-CELERY_ACKS_LATE = True
-CELERYD_POOL_RESTARTS = True
-
+#TASK_REJECT_ON_WORKER_LOST = True
+#TASK_ACKS_LATE = True
 
 # Air Conditioner Part
 AC_SERVER_IP = '10.100.100.20'
@@ -77,7 +61,7 @@ MANTUNSCI_ROUTER_URI = 'http://10.100.101.198/ebx-rook/invoke/router.as'
 FLOOR_ROOM_MAPPING = {
     3: range(301, 325),
     4: range(401, 428),
-    5: range(501, 523),
+    5: range(501, 524),
     6: range(601, 630),
     7: range(701, 730),
     9: range(901, 905),
@@ -100,3 +84,6 @@ PEOPLE_COUNT = {
 # redis part
 REDIS_PORT = 63379
 REDIS_HOST = '127.0.0.1'
+
+# zlan part
+ZLAN_PORT = 4196

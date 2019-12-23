@@ -8,14 +8,13 @@ def scan_ir(ip_tail: str, addr: str):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.settimeout(5)
     client.connect((f'10.100.102.{ip_tail}', 4196))
-    data = bytes.fromhex(f'DA 00 {addr} 86 86 86 EE')
+    data = bytes.fromhex(f'DA 00 {addr} 03 ff ee')
     time.sleep(0.5)
     client.send(data)
     try:
         m = client.recv(1024)
         print(addr, 'pass')
-        print(ip_tail)
-        print(m)
+        print(m.hex())
         client.close()
     except Exception as e:
         print(e)

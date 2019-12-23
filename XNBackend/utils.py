@@ -16,3 +16,19 @@ def query_panel_status(client, ip, batch_no, addr_no):
     client.send(data)
     ret = client.recv(1024)
     return ret
+
+
+def int2hex(number) -> str:
+    return hex(number).lstrip('0x').rjust(2, '0')
+
+
+def get_socket_client(ip, port, timeout=None):
+    try:
+        conn_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        if timeout:
+            conn_client.settimeout(timeout)
+        conn_client.connect((ip, port))
+        return conn_client
+    except Exception as e:
+        return
+

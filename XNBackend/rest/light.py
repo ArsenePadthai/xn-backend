@@ -21,7 +21,7 @@ class LightControl(Resource):
 
         sp = SwitchPanel.query.filter(SwitchPanel.locator_id == room_no).first()
         if not sp:
-            return {"errMsg": f'no matching panel found for this room {room_no}'}
+            return {"code": -1, "message": f'no matching panel found for this room {room_no}'}
 
         try:
             client = get_panel_client(sp.tcp_config.ip, 4196)
@@ -56,7 +56,6 @@ class LightControl(Resource):
             sw = Switches.query.filter(Switches.switch_panel_id == sp.id
                                        ).filter(Switches.channel == channel).first()
             sw.status = is_open
-            db.session.add(sw)
             db.session.commit()
             client.close()
         except Exception as e:

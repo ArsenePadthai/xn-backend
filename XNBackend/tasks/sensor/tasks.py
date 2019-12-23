@@ -10,8 +10,7 @@ from enum import Enum
 
 from XNBackend.parser.protocol import data_parse
 from XNBackend.tasks import celery, logger
-from XNBackend.models.models import db, IRSensors, AQIValues, AQISensors, \
-    LuxValues, LuxSensors, Switches, SwitchPanel, Relay, TcpConfig, AutoControllers
+from XNBackend.models.models import db, IRSensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, TcpConfig, AutoControllers
 
 
 L = logger.getChild(__name__)
@@ -31,49 +30,6 @@ def tcp_client(host, port, block=True):
         client.settimeout(15)
     client.connect((host, port))
     L.info('success Connected to %s: %s' % (host, port))
-
-
-def send_to_server(data, host, port):
-    assert client is not None, 'TCP client not initialized'
-
-    try:
-        client.send(data)
-        data_byte = client.recv(1024)
-        tcp = TcpConfig.query.filter_by(ip=host, port=port).first()
-        message = data_parse(data_byte, tcp.id)
-        L.info('Received data: %s', message)
-    except Exception as e:
-        L.error(e)
-        L.info('after 5s later, restart processes pool')
-        time.sleep(5)
-        L.exception('try to restart child processes pool...')
-        celery.control.pool_restart(reload=True, destination=['worker@'+host+':'+str(port)])
-
-    return message
-
-
-def data_generate(model):
-    models = {
-        'Relay': [Relay, '55', '10 00 00 00 00'],
-        'IR': [IRSensors, 'DA', '86 86 86 EE'],
-        'AQI': [AQISensors, 'DA', '86 86 86 EE'],
-        'Lux': [LuxSensors, 'DE', '86 86 86 EE']
-    }
-
-    if model == 'Relay':
-        for sensor in models[model][0].query.order_by():
-            data = bytes.fromhex(models[model][1])
-            + pack('>B', int(sensor.addr))
-            + bytes.fromhex(models[model][2])
-            + bytes.fromhex(hex(101+int(sensor.addr))[-2:])
-            yield data, sensor
-    else:
-        for sensor in models[model][0].query.order_by():
-            data = bytes.fromhex(models[model][1])
-            + pack('>B', sensor.batch_no)
-            + pack('>B', sensor.addr_no)
-            + bytes.fromhex(models[model][2])
-            yield data, sensor
 
 
 def keep_alive(ip, port, use_for):
@@ -100,66 +56,6 @@ def keep_alive(ip, port, use_for):
         time.sleep(10)
 
 
-def day_control(control_id):
-    control = AutoControllers.query.filter_by(id=control_id).first()
-    for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id,
-                                           channel=1).order_by():
-        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-            relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
-
-
-def night_control(control_id):
-    control = AutoControllers.query.filter_by(id=control_id).first()
-    panel = SwitchPanel.query.filter_by(id=control.switch_panel_id).first()
-    if panel.panel_type == 0:
-        for switch in Switches.query.filter(or_(Switches.channel == 1, Switches.channel == 2),
-                                            switch_panel_id=control.switch_panel_id).order_by():
-            for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-                relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
-    else:
-        for switch in Switches.query.filter_by(switch_panel_id=control.switch_panel_id,
-                                               channel=1).order_by():
-            for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-                relay_panel_control.apply_async(args=[relay.id, 0], queue='relay')
-
-
-# @celery.tasks(serializer='pickle')
-# def ir_query(control_id, auto, is_day=None):
-#     try:
-#         control = AutoControllers.query.filter_by(id=control_id).first()
-#         sensor = IRSensors.query.filter_by(batch_no=control.ir_sensor.batch_no,
-#                                        addr_no=control.ir_sensor.addr_no).first()
-#         data = bytes.fromhex('DA') + pack('>B', sensor.batch_no) + pack('>B', sensor.addr_no)
-#         + bytes.fromhex('86 86 86 EE')
-#     except Exception as e:
-#         L.error(e)
-#         pass 
-
-#     try:
-#         msg = send_to_server(data, sensor.tcp_config.ip, sensor.tcp_config.port)
-#         record = IRSensorStatus(sensor_id=control.ir_sensor_id,
-#                                 value=msg.detectValue,
-#                                 status=msg.status)
-#         db.session.add(record)
-#         db.session.flush()
-#         sensor.latest_record_id = record.id
-#         if msg.status == 0 and auto:
-#             control.ir_count += 1
-#         elif auto is False:
-#             control.ir_count = 0 if msg.status else 1
-#         db.session.commit()
-#     except Exception as e:
-#         L.error(e)
-#         L.exception('Records update failure')
-#         db.session.rollback()
-
-#     if control.ir_count > 1:
-#         if is_day == 1:
-#             day_control(control.id)
-#         elif is_day == 0:
-#             night_control(control.id)
-
-
 @celery.task(serializer='pickle')
 def ir_query(batch_no, addr):
     data = bytes.fromhex('DA') + pack('>B', batch_no) \
@@ -179,36 +75,6 @@ class panel(Enum):
     auto = 3
     auxLight = 4
     doubleAuto = 2
-
-
-@celery.task(serializer='pickle')
-def auto_change(relay_id, is_open):
-    pass
-    # try:
-    #     sensor = Relay.query.filter_by(id=relay_id).first()
-    #     if sensor.switch.channel == panel.mainLight or sensor.switch.channel == panel.auxLight and sensor.switch.switch_panel.panel_type == panel.fourType:
-    #         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
-    #         control.if_auto = 0
-    #     elif sensor.switch.channel == panel.auto or sensor.switch.channel == panel.doubleAuto and sensor.switch.switch_panel.panel_type == panel.doubleType:
-    #         control = AutoControllers.query.filter_by(switch_panel_id=sensor.switch.switch_panel_id).first()
-    #         if is_open:
-    #             L.info('Start auto control')
-    #             ir_query.apply_async(args = [control.id, False], queue = control.ir_sensor.tcp_config.ip+':'+str(control.ir_sensor.tcp_config.port))
-    #         control.if_auto = is_open
-    # except Exception as e:
-    #     L.error(e)
-    #     pass
-    # else:
-    #     try:
-    #         record = RelayStatus(relay_id=sensor.id, value=is_open)
-    #         db.session.add(record)
-    #         db.session.flush()
-    #         sensor.latest_record_id = record.id
-    #         db.session.commit()
-    #         L.info('Record relay status successfully')
-    #     except:
-    #         L.exception('db commit failure')
-    #         db.session.rollback()
 
 
 @celery.task(serializer='pickle')
@@ -370,80 +236,6 @@ def relay_panel_control(relay_id, is_open):
     all_data = data_pre+data
     data_bytes = bytes.fromhex('DA')+pack('>B', panel.batch_no)+pack('>B', panel.addr_no)+pack('>B', 2)+bytes.fromhex(all_data)+bytes.fromhex('EE')
     client_send.apply_async(args = [data_bytes], queue = panel.tcp_config.ip+':'+str(panel.tcp_config.port))
-
-
-
-# @celery.tasks(bind=True, serializer='pickle')
-# def relay_query(self, query_data, id):
-#     sensor = Relay.query.filter_by(id=id).first()
-#     L.info("Query the status of relay, send '%s' to the server", query_data)
-#     try:
-#         client_temp = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-#         client_temp.connect((sensor.tcp_config.ip, sensor.tcp_config.port))
-#         client_temp.send(query_data)
-#         data_byte = client_temp.recv(1024)
-#     except Exception as e:
-#         L.exception('relay_query error')
-#         L.error(e)
-#     try:
-#         client_temp.close()
-#     except Exception:
-#         pass
-
-#     if len(data_byte) == 8 and data_byte[0] == 34: 
-#         data = data_parse(data_byte)
-#     else:
-#         pass 
-#     status = ((data.status & 1 << sensor.channel-1) != 0)
-#     relay_panel_control.apply_async(args=[sensor.id, status], queue='relay')
-#     record = RelayStatus(relay_id=sensor.id, value=status) 
-#     db.session.add(record)
-#     db.session.flush()
-#     sensor.latest_record_id = record.id
-#     try:
-#         db.session.commit()
-#     except:
-#         L.exception('db commit failure')
-#         db.session.rollback()
-
-
-@celery.task(bind=True, serializer='pickle')
-def sensor_query(self, sensor_name, query_data, id):
-    task = {
-        # 'IR':[IRSensorStatus, {
-        #     'value': 'detectValue',
-        #     'status': 'status'
-        # }, IRSensors],
-        'AQI':[AQIValues, {
-            'temperature': 'temperature',
-            'humidity': 'humidity',
-            'pm25': 'pm25',
-            'co2': 'co2',
-            'tvoc': 'tvoc',
-            'hcho': 'hcho'
-        }, AQISensors], 
-        'Lux':[LuxValues, {
-            'value': 'lux'
-        }, LuxSensors]
-    }
-
-    sensor = task[sensor_name][2].query.filter_by(id=id).first()
-    L.info("Query the status of %s, send '%s' to the server", sensor_name, query_data)
-    try:
-        data = send_to_server(query_data, sensor.tcp_config.ip, sensor.tcp_config.port)
-    except Exception as e:
-        L.error('sensor_query')
-        L.error(e)
-        celery.control.pool_restart(reload=True, destination=[self.request.hostname])
-
-    data_args = {
-        k: getattr(data, v) for k,v in task[sensor_name][1].items()
-    }
-    record = task[sensor_name][0](sensor_id=sensor.id, **data_args)
-    db.session.add(record)
-    db.session.flush()
-    sensor.latest_record_id = record.id
-    db.session.commit()
 
 
 @celery.task()

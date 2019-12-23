@@ -1,4 +1,5 @@
 from flask import Flask
+import flask_restless
 from flask_compress import Compress
 from flask_log_request_id import RequestID
 from XNBackend.tasks import celery
@@ -6,11 +7,10 @@ from XNBackend.app.filters import add_filters
 from XNBackend.app.extensions import init_logger, init_cache, bcrypt, init_api
 from XNBackend.models import db, HeatMapSnapshots, Users, UserLogins, AppearRecords, \
     LatestPosition, TrackingDevices, EnegyConsumeMonthly, EnergyConsumeDaily,\
-IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators, S3FC20, Relay
+    IRSensors, AQISensors, LuxSensors, FireAlarmSensors, Switches, Elevators, S3FC20, Relay
 from XNBackend.extension import SaferProxyFix
 from XNBackend.api import api_bp
 from XNBackend.rest import dashboard_api_bp
-import flask_restless
 from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt_identity
 from flask_jwt_extended.exceptions import NoAuthorizationError
 from XNBackend.cli import user_cli, systemd
@@ -81,9 +81,6 @@ def create_app(config_filename=None):
                                 preprocessors=preprocessors)
     restless_manager.create_api(LatestPosition, methods=["GET"])
     restless_manager.create_api(TrackingDevices, methods=["GET"])
-    # restless_manager.create_api(LatestCircuitRecord, methods=["GET"])
-    # restless_manager.create_api(CircuitBreakers, methods=["GET"])
-    # restless_manager.create_api(LatestAlarm, methods=["GET"])
     restless_manager.create_api(EnegyConsumeMonthly, methods=["GET"])
     restless_manager.create_api(EnergyConsumeDaily, methods=["GET"])
     restless_manager.create_api(IRSensors, methods=["GET"])

@@ -278,57 +278,27 @@ class IRSensors(db.Model, TimeStampMixin):
     locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
-    # latest_record_id = db.Column(Integer,
-    #                              ForeignKey(IRSensorStatus.id,
-    #                                         ondelete='SET NULL'))
     threshold = db.Column(db.Integer)
     delay = db.Column(db.Integer)
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id, ondelete='SET NULL'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-    # latest_record = relationship('IRSensorStatus',
-    #                              foreign_keys=[latest_record_id])
     locator_body = relationship('Locators', foreign_keys=[locator])
     # 1 means detected; 0 means no detected
     status = db.Column(db.SmallInteger)
 
 
-class AQIValues(db.Model, TimeStampMixin):
-    __tablename__ = 'aqi_values'
-    # 只有主动查询
-    id = db.Column(Integer, primary_key=True)
-    sensor_id = db.Column(Integer, ForeignKey("aqi_sensors.id",
-                                              ondelete="CASCADE"))
-    temperature = db.Column(Float)
-    humidity = db.Column(Float)
-    pm25 = db.Column(db.DECIMAL(8, 3))
-    co2 = db.Column(Float)
-    tvoc = db.Column(Float)
-    hcho = db.Column(Float)
-    sensor = relationship('AQISensors', foreign_keys=[sensor_id])
-
-
 class AQISensors(db.Model, TimeStampMixin):
     __tablename__ = 'aqi_sensors'
     id = db.Column(Integer, primary_key=True)
-    device_index_code = db.Column(Unicode(length=MEDIUM_LEN_50), index=True)
+    addr_int = db.Column(Integer)
+    addr_hex = db.Column(Unicode(length=4))
     locator = db.Column(Unicode(length=MEDIUM_LEN_50),
                         ForeignKey(Locators.internal_code,
                                    ondelete='SET NULL'))
-    latest_record_id = db.Column(Integer, ForeignKey(AQIValues.id,
-                                                     ondelete="SET NULL"))
-    latest_record = relationship('AQIValues', foreign_keys=[latest_record_id])
     locator_body = relationship('Locators')
     tcp_config_id = db.Column(Integer, ForeignKey(TcpConfig.id,
                                                   ondelete='set null'))
     tcp_config = relationship('TcpConfig', foreign_keys=[tcp_config_id])
-
-
-class AQIEventCount(db.Model):
-    __tablename__ = "aqi_event_count"
-    id = db.Column(Integer, primary_key=True)
-    aqi_id = db.Column(Integer, ForeignKey(AQISensors.id,
-                                           ondelete="CASCADE"))
-    count = db.Column(Integer)
 
 
 class LuxValues(db.Model, TimeStampMixin):
