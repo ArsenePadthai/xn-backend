@@ -156,6 +156,9 @@ def client_recv(ip, port, use_for):
             time.sleep(10)
             L.exception('try to restart child processes pool...')
             celery.control.pool_restart(reload=True, destination=['worker@'+ip+':'+str(port)])
+        if ip=='10.100.102.4':
+            L.debug('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+            L.debug(recv_data)
 
         while int(len(recv_data)/8):
             data, recv_data = recv_data[0:8], recv_data[8:]

@@ -30,6 +30,8 @@ low_exchange = Exchange('first', type='direct')
 high_exchange = Exchange('second', type='direct')
 
 
+CELERY_TIMEZONE = 'Asia/Shanghai'
+
 CELERYBEAT_SCHEDULE = {
     "query_air_condition": {
         'task': 'XNBackend.tasks.air_condition.tasks.periodic_query_air_condition',

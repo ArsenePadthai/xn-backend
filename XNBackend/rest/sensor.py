@@ -88,7 +88,7 @@ def check_ir(floor):
             error += 1
         else:
             value = json.loads(value)
-            if 1 in value:
+            if 1 in value[0]:
                 detail[room] = 1
                 occupied += 1
             else:

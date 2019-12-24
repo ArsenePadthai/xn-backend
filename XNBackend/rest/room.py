@@ -1,3 +1,6 @@
+import redis
+import json
+from flask import current_app
 from flask_restful import Resource, reqparse
 from XNBackend.models import IRSensors, TrackingDevices, Switches, AirConditioner, Relay
 from XNBackend.api_client.air_conditioner import get_ac_data
@@ -28,11 +31,17 @@ class Room(Resource):
                     ac_info.append(each_ac_dict)
 
         ir_value = -1
-        for i in ir_sensor:
-            if i.status == 0:
-                ir_value = 0
-            elif i.status == 1:
+        R1 = redis.Redis(host=current_app.config['REDIS_HOST'],
+                         port=current_app.config['REDIS_PORT'])
+        value = R1.get('IR_' + str(room_number))
+        if not value:
+            ir_value = -1
+        else:
+            value = json.loads(value)
+            if 1 in value[0]:
                 ir_value = 1
+            elif 0 in value[0]:
+                ir_value = 0
 
         acs_lock_value = True
 

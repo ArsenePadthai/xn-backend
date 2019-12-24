@@ -39,14 +39,14 @@ class ElectricConsumeByDay(Resource):
             measure = enery_consume.s3_fc20.measure_type
             if measure == 0:
                 measure_name = 'light'
-                light += enery_consume.electricity * 1000
+                light += enery_consume.electricity
             elif measure == 1:
                 measure_name = 'ac'
-                ac += enery_consume.electricity*1000
+                ac += enery_consume.electricity
             else:
                 measure_name = 'socket'
-                socket += enery_consume.electricity*1000
-            detail[this_room][measure_name] = int(enery_consume.electricity*1000)
+                socket += enery_consume.electricity
+            detail[this_room][measure_name] = int(enery_consume.electricity)
 
         time_key = time_marker.strftime('%Y-%m-%d')
         return {time_key: {"light": int(light),
