@@ -53,10 +53,12 @@ class LightControl(Resource):
         L.debug(cmd)
         try:
             client.send(cmd)
-            sw = Switches.query.filter(Switches.switch_panel_id == sp.id
-                                       ).filter(Switches.channel == channel).first()
-            sw.status = is_open
-            db.session.commit()
+            import time
+            time.sleep(0.5)
+            #sw = Switches.query.filter(Switches.switch_panel_id == sp.id
+            #                           ).filter(Switches.channel == channel).first()
+            #sw.status = is_open
+            #db.session.commit()
             client.close()
         except Exception as e:
             L.exception(e)
