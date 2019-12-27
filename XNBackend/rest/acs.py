@@ -1,3 +1,4 @@
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse
 from XNBackend.tasks.hik.tasks import acs_control
 from XNBackend.models.models import TrackingDevices, Door
@@ -13,6 +14,7 @@ acs_get_parser.add_argument('floor',
 
 
 class AcsControl(Resource):
+    @jwt_required
     def patch(self):
         args = acs_parser.parse_args()
         room_no = int(args.get('room_no'))

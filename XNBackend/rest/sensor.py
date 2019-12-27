@@ -1,9 +1,10 @@
 import time
 import json
+from datetime import datetime
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse, fields, marshal_with
-from datetime import datetime, timedelta
 from flask import current_app
-from XNBackend.models import IRSensors, AppearRecords, Elevators, \
+from XNBackend.models import AppearRecords, Elevators, \
     Relay, Switches, SwitchPanel
 from .utils import MyDateTime
 
@@ -211,6 +212,7 @@ class Light(Resource):
 
 
 class FaceRecognition(Resource):
+    @jwt_required
     @marshal_with(appear_fields)
     def get(self):
         args = query_appear_parser.parse_args()

@@ -1,5 +1,6 @@
 from datetime import datetime
 from flask_restful import Resource, reqparse, fields, marshal_with
+from flask_jwt_extended import jwt_required
 from sqlalchemy import func, and_
 from XNBackend.models import AppearRecords
 from .utils import MyDateTime
@@ -24,6 +25,7 @@ appear_fields = {
 
 
 class AppearRecordsApi(Resource):
+    @jwt_required
     @marshal_with(appear_fields)
     def get(self):
         args = time_parser.parse_args()

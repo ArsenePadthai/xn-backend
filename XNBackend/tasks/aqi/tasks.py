@@ -81,6 +81,7 @@ def periodic_update_aqi_ir_value():
 
     for th in threads:
         th.start()
+    for th in threads:
         th.join()
 
 

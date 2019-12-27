@@ -1,7 +1,10 @@
 from flask_restful import Resource, reqparse
 from flask import current_app
+from flask_jwt_extended import jwt_required
 from XNBackend.models import AirConditioner
-from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition, update_specific_air_condition
+from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition
+from XNBackend.rest.utils import ac_info_from_model
+
 
 ac_patch_parser = reqparse.RequestParser()
 ac_patch_parser.add_argument('device_index_code', required=True, type=str, 
@@ -23,6 +26,7 @@ def return_room_status(floor, status):
 
 
 class AirConditionControl(Resource):
+    @jwt_required
     def patch(self):
         args = ac_patch_parser.parse_args()
         device_index_code = args.get('device_index_code')
@@ -47,10 +51,21 @@ class AirConditionControl(Resource):
         send_cmd_to_air_condition.apply_async(args=[device_index_code],
                                               kwargs=kwarg_control,
                                               queue="general")
-        update_specific_air_condition.apply_async(args=[device_index_code],
-                                                  queue='general',
-                                                  countdown=10)
+        # update_specific_air_condition.apply_async(args=[device_index_code],
+        #         #                                           queue='general',
+        #         #                                           countdown=10)
         return {'errMsg': 'ok'}
+
+    def get(self):
+        args = ac_patch_parser.parse_args()
+        device_index_code = args.get('device_index_code')
+        ac = AirConditioner.query.filter(AirConditioner.device_index_code == device_index_code).first()
+        if not ac:
+            return {"code": -1,
+                    "message": f'can not find air condition device_index_code: {device_index_code}'}
+        return {"message": "ok",
+                "code": 0,
+                "data": ac_info_from_model(ac)}
 
 
 class AirCondition(Resource):

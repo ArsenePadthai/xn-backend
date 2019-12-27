@@ -1,4 +1,5 @@
 import logging
+from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse
 from XNBackend.models import db, SwitchPanel, AirConditioner
 from XNBackend.tasks.sensor.tasks import network_relay_control_sync
@@ -22,6 +23,7 @@ floor_control_parser.add_argument('resource_type',
 
 
 class FloorControl(Resource):
+    @jwt_required
     def patch(self):
         args = floor_control_parser.parse_args()
         floor = args.get('floor')

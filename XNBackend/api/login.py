@@ -1,7 +1,8 @@
 from ._blueprint import api_bp
 from flask import request, jsonify, make_response
-from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required
-from ..models import UserLogins, Users
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, \
+    create_refresh_token, jwt_refresh_token_required
+from ..models import UserLogins
 
 
 @api_bp.route('/api/login', methods=['POST'])
@@ -12,19 +13,33 @@ def login():
     password = request.json.get('password', None)
 
     if not username:
-        return jsonify({"msg": "Missing username parameter"})
+        return jsonify({"message": "Missing username parameter", "code": -1})
     if not password:
-        return jsonify({"msg": "Missing password parameter"})
+        return jsonify({"message": "Missing password parameter", "code": -1})
     
     user = UserLogins.query.filter_by(username=username).first()
     if user is None or not user.check_password(password):
-        resp = make_response(jsonify({"msg": "User not exists or password is wrong."}))
+        resp = make_response(jsonify({"message": "User not exists or password is wrong.", "code": -1}))
         return resp
     else:
-        resp = make_response(jsonify({"msg": "login success", "user_id": user.id}), 200)
         access_token = create_access_token(identity=username)
-        resp.set_cookie('access_token_cookie', access_token)
+        refresh_token = create_refresh_token(identity=username)
+        resp = make_response(jsonify({"message": "ok",
+                                      "user_id": user.id,
+                                      "access_token": access_token,
+                                      "refresh_token": refresh_token}), 200)
         return resp
+
+
+@api_bp.route('/api/refresh', methods=['POST'])
+@jwt_refresh_token_required
+def refresh():
+    current_user = get_jwt_identity()
+    ret = {
+        'access_token': create_access_token(identity=current_user),
+        'refresh_token': create_refresh_token(identity=current_user)
+    }
+    return jsonify(ret), 200
 
 
 @api_bp.route('/api/current_user', methods=['GET'])

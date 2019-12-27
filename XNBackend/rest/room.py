@@ -2,8 +2,9 @@ import redis
 import json
 from flask import current_app
 from flask_restful import Resource, reqparse
-from XNBackend.models import IRSensors, TrackingDevices, Switches, AirConditioner, Relay
+from XNBackend.models import Switches, AirConditioner, Relay
 from XNBackend.api_client.air_conditioner import get_ac_data
+from XNBackend.rest.utils import ac_info_from_model
 
 
 room_parser = reqparse.RequestParser()
@@ -14,21 +15,13 @@ class Room(Resource):
     def get(self):
         room_number = room_parser.parse_args().get('room')
         errMsg = []
-        ir_sensor = IRSensors.query.filter(IRSensors.locator_body.has(zone=room_number))
-        tracking_device = TrackingDevices.query.filter(TrackingDevices.locator_body.has(zone=room_number))
-
         ac_info = []
         air_conditions = AirConditioner.query.filter(AirConditioner.locator_id == room_number).all()
         if not air_conditions:
             errMsg.append(f'{room_number} has no air condition')
         else:
-            ac_index_codes = [a.device_index_code for a in air_conditions]
-            ret = get_ac_data(ac_index_codes)
-            if ret.get('errMsg') == 'ok':
-                ac_datas = ret.get('data')
-                for each_ac in ac_datas:
-                    each_ac_dict = AirConditioner.extract_data(each_ac)
-                    ac_info.append(each_ac_dict)
+            for ac in air_conditions:
+                ac_info.append(ac_info_from_model(ac))
 
         ir_value = -1
         R1 = redis.Redis(host=current_app.config['REDIS_HOST'],

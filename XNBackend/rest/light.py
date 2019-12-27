@@ -1,7 +1,7 @@
 import logging
 from flask_restful import Resource, reqparse
-from XNBackend.tasks.sensor.tasks import tasks_route
-from XNBackend.models import SwitchPanel, Switches, db
+from flask_jwt_extended import jwt_required
+from XNBackend.models import SwitchPanel
 from ..utils import query_panel_status, get_panel_client
 
 light_parser = reqparse.RequestParser()
@@ -13,6 +13,7 @@ L = logging.getLogger(__name__)
 
 
 class LightControl(Resource):
+    @jwt_required
     def patch(self):
         args = light_parser.parse_args()
         room_no = args.get('room_no')
@@ -55,17 +56,9 @@ class LightControl(Resource):
             client.send(cmd)
             import time
             time.sleep(0.5)
-            #sw = Switches.query.filter(Switches.switch_panel_id == sp.id
-            #                           ).filter(Switches.channel == channel).first()
-            #sw.status = is_open
-            #db.session.commit()
             client.close()
         except Exception as e:
             L.exception(e)
             client.close()
             return {'errMsg': 'failed to send cmd to panel'}
-
-        # tasks_route.apply_async(args=['LocatorControl', channel, is_open],
-        #                         kwargs={'zone': room_no},
-        #                         queue='general')
         return {'errMsg': 'ok'}

@@ -10,10 +10,9 @@ CELERY_RESULT_BACKEND = 'redis://127.0.0.1:63379'
 WTF_CSRF_SECRET_KEY = SECRET_KEY = 'aaaabbbccddefg'
 
 
-JWT_TOKEN_LOCATION='cookies'
 JWT_SECRET_KEY='qazxcvbnmklpoiuytrewsdfghjk'
 JWT_AUTH_URL_RULE=None
-JWT_ACCESS_TOKEN_EXPIRES=timedelta(days=7)
+JWT_ACCESS_TOKEN_EXPIRES=3600
 
 # SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://xn:Pass1234@10.100.101.199:3306/xn?charset=utf8mb4'
 SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://test:test@127.0.0.1:33306/xn?charset=utf8mb4'

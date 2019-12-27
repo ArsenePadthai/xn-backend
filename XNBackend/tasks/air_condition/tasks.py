@@ -1,8 +1,9 @@
-from XNBackend.tasks import celery, logger
+import logging
+from XNBackend.tasks import celery
 from XNBackend.models import db, AirConditioner
 from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
 
-L = logger.getChild(__name__)
+L = logging.getLogger(__name__)
 
 
 @celery.task()
@@ -31,7 +32,18 @@ def periodic_query_air_condition():
 @celery.task()
 def send_cmd_to_air_condition(device_index_code: str, **kwarg):
     ret = set_ac_data(device_index_code, **kwarg)
-    return 0 if ret.get('errMsg') == 'ok' else 1
+    if ret.get('errMsg') == 'ok':
+        ac = AirConditioner.query.filter(AirConditioner.device_index_code == device_index_code).first()
+        if ac:
+            if "StartStopStatus" in kwarg:
+                ac.ac_on = kwarg['StartStopStatus']
+            if "TempSet" in kwarg:
+                ac.desired_temperature = kwarg['TempSet']
+            if "FanSpeedSet" in kwarg:
+                ac.desired_speed = kwarg['FanSpeedSet']
+            db.session.commit()
+        return 0
+    return 1
 
 
 @celery.task()
