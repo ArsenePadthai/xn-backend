@@ -86,10 +86,10 @@ def periodic_update_aqi_ir_value():
 
 @celery.task()
 def no_exist_count():
-    ir = IRSensors.query.filter(IRSensors.id == 2).first()
+    ir = IRSensors.query.filter(IRSensors.id == 18).first()
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     conn.settimeout(5)
-    conn.connect(('10.100.102.84', 4196))
+    conn.connect(('10.100.102.83', 4196))
     time.sleep(1)
     ret = query_ir_status(ir.addr_no, conn)
     conn.close()

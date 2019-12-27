@@ -2,7 +2,8 @@
 import redis
 import requests
 from datetime import datetime, timedelta
-from XNBackend.tasks import celery
+import logging
+from XNBackend.tasks import celery, logger
 from XNBackend.tasks.utils import get_mantunsci_addr_mapping, MantunsciRealTimePower,\
     EnergyConsumeDay, ElectriConsumeHour, EnergyAlarm
 from XNBackend.models import db, MantunciBox
@@ -19,6 +20,8 @@ auth_param = {
     'router_uri': mantunsci_config['MANTUNSCI_ROUTER_URI'],
     'project_code': mantunsci_config['MANTUNSCI_PROJECT_CODE']
 }
+
+L = logging.getLogger(__name__)
 
 
 @celery.task()
@@ -98,7 +101,11 @@ def periodic_electricity_usage_day():
         auth_param['redirect_uri'],
     )
     current_time = datetime.now() + timedelta(days=-1)
+    aa=0
     for mb in mbs:
+        L.debug('====================start debug=================')
+        L.debug(current_time.month)
+        L.debug(current_time.day)
         req_body = {
             "method": "GET_BOX_DAY_POWER",
             "projectCode": auth_param['project_code'],
@@ -113,7 +120,12 @@ def periodic_electricity_usage_day():
                                     auth_param['router_uri'],
                                     auth_param['project_code'])
         elec_day.load_data_from_response(req_body)
+        L.debug('====================check records===============')
+        L.debug(elec_day.records)
+        aa+=len(elec_day.records)
+        L.debug('====================end debug=================')
         elec_day.save_data(db_session=session)
+    L.debug(aa)
 
 
 @celery.task()
