@@ -2,6 +2,7 @@ import json
 import random
 from flask import current_app
 from flask_restful import Resource, reqparse
+from XNBackend.utils import get_redis_value, check_time_valid
 
 
 floor_parser = reqparse.RequestParser()
@@ -12,6 +13,10 @@ class AQISensor(Resource):
     def get(self):
         import redis
         R = redis.Redis(host=current_app.config['REDIS_HOST'], port=current_app.config['REDIS_PORT'])
+        outer_temperature = get_redis_value(R, 'OUTER_temperature')
+        outer_humidity = get_redis_value(R, 'OUTER_humidity')
+        outer_pm25 = get_redis_value(R, 'OUTER_pm25')
+
         args = floor_parser.parse_args()
         floor = args.get('floor')
         floor = 5
@@ -24,15 +29,18 @@ class AQISensor(Resource):
             9: []
         }
         aqi_room = random.choice(aqi_collections[floor])
-        aqi_values = R.get('AQI_'+aqi_room)
+        aqi_values = get_redis_value(R, 'AQI_'+aqi_room)
         # TODO VALIDATE THE TIME HAS NOT EXPIRED
-        if not aqi_values:
-            # mock value
-            ret = (681, 49, 0.02, 0, 46.2, 17.8)
+        if not aqi_values or not check_time_valid(aqi_values[1]):
+            aqi_values = [None] * 6
         else:
-            ret = json.loads(aqi_values)[0]
-        return {"tem": {"out": 20, "in": ret[-1]},
-                "hum": {"out": 80, "in": ret[-2]},
-                "pm25": {"out": 43, "in": ret[-3]},
-                "co2": {"in": ret[0]},
-                "tvoc": {"out": 0.2, "in": ret[1]}}
+            aqi_values = aqi_values[0]
+        return {"tem": {"out": outer_temperature,
+                        "in": aqi_values[-1]},
+                "hum": {"out": outer_humidity,
+                        "in": aqi_values[-2]},
+                "pm25": {"out": outer_pm25,
+                         "in": aqi_values[-3]},
+                "co2": {"in": aqi_values[0]},
+                "tvoc": {"out": None,
+                         "in": aqi_values[1]}}

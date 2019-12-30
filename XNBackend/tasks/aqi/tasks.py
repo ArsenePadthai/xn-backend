@@ -7,6 +7,7 @@ import threading
 from XNBackend.tasks import celery
 from XNBackend.api_client.aqi_client import query_aqi_value
 from XNBackend.api_client.ir_client import query_ir_status
+from XNBackend.api_client.public_aqi import request_weather_info
 from XNBackend.models import AQISensors, IRSensors
 from XNBackend.utils import get_socket_client
 
@@ -35,7 +36,7 @@ def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
 
         resp = query_func(addr_int, conn_client)
         if resp is not None:
-            if s.__tablename__ == 'aqi_sensor':
+            if s.__tablename__ == 'aqi_sensors':
                 redis_conn.set(f'{prefix}_{s.locator}', json.dumps((resp, timestamp)))
             else:
                 value = redis_conn.get(f'{prefix}_{s.locator}')
@@ -44,7 +45,6 @@ def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
                 else:
                     load_value = json.loads(value)
                     if len(load_value) != 2:
-                        print('xxxxxxx')
                         return
                     prev_timestamp = load_value[1]
                     prev_status = load_value[0]
@@ -104,3 +104,20 @@ def no_exist_count():
             R1.set('NO_EXIST_COUNT', json.dumps(count))
         else:
             R1.set('NO_EXIST_COUNT', json.dumps(0))
+
+
+@celery.task()
+def periodic_update_outer_aqi():
+    weather_info = request_weather_info('weather', 'wuxi')
+    aqi_info = request_weather_info('aqi', 'wuxi')
+    if weather_info is None or aqi_info is None:
+        return
+    R_aqi = redis.Redis(host=celery.flask_app.config['REDIS_HOST'],
+                        port=celery.flask_app.config['REDIS_PORT'])
+    R_aqi.set('OUTER_temperature',
+              json.dumps(weather_info['temperature']))
+    R_aqi.set('OUTER_humidity',
+              json.dumps(weather_info['humidity']))
+    R_aqi.set('OUTER_pm25',
+              json.dumps(int(aqi_info['pm25'])))
+

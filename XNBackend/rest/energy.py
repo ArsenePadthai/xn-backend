@@ -4,7 +4,6 @@ import random
 from flask_restful import Resource, reqparse
 from flask import current_app
 
-R = redis.Redis(host='127.0.0.1', port=6379)
 
 floor_parser = reqparse.RequestParser()
 floor_parser.add_argument('floor',
@@ -22,6 +21,8 @@ class Energy(Resource):
 
     @staticmethod
     def get_room_data(room_no):
+        R = redis.Redis(host=current_app.config['REDIS_HOST'],
+                        port=current_app.config['REDIS_PORT'])
         data = []
         for i in range(0, 3):
             key = '_'.join(['RTE', room_no, str(i)])
@@ -106,6 +107,8 @@ class Energy(Resource):
 
 class EnergyShow(Resource):
     def get_r_value(self, key):
+        R = redis.Redis(host=current_app.config['REDIS_HOST'],
+                        port=current_app.config['REDIS_PORT'])
         value = R.get(key)
         return (0, 0) if not value else json.loads(value)
 
@@ -123,9 +126,17 @@ class EnergyShow(Resource):
             light_value = self.get_r_value(light_key)
             ac_value = self.get_r_value(ac_key)
             socket_value = self.get_r_value(socket_key)
-            room_power = light_value[0] + ac_value[0] + socket_value[0]
 
-            data_dict[str(room)] = (room_power, light_value[0], ac_value[0], socket_value[0], random.randint(0, 1))
+            normalized_light_value = light_value[0]/1000
+            normalized_ac_value = ac_value[0]/1000
+            normalized_socket_value = socket_value[0]/1000
+            room_power = normalized_light_value + normalized_ac_value + normalized_socket_value
+
+            data_dict[str(room)] = (room_power,
+                                    normalized_light_value,
+                                    normalized_ac_value,
+                                    normalized_socket_value,
+                                    random.randint(0, 1))
 
         #return data_dict
         m = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)

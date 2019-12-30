@@ -1,4 +1,6 @@
 import socket
+import json
+import time
 
 
 def get_panel_client(ip, port):
@@ -31,4 +33,23 @@ def get_socket_client(ip, port, timeout=None):
         return conn_client
     except Exception as e:
         return
+
+
+def get_redis_value(redis_conn, key):
+    dumped = redis_conn.get(key)
+    if dumped:
+        return json.loads(dumped)
+    else:
+        return
+
+
+def check_time_valid(ts, ts_gap=600):
+    now_ts = int(time.time())
+    return now_ts - ts_gap <= ts
+
+
+def form_float(number):
+    """limit float to 2 decimal"""
+    return float('%.2f' % number)
+
 

@@ -35,7 +35,6 @@ def query_aqi_value(addr, conn):
         time.sleep(1)
         conn.send(data)
         recv = conn.recv(1024)
-        print(recv.hex())
         L.info(recv)
         assert len(recv) == 16
         return parse_aqi_return(recv)

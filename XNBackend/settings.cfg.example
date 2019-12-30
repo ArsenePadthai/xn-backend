@@ -88,3 +88,10 @@ REDIS_HOST = '127.0.0.1'
 
 # zlan part
 ZLAN_PORT = 4196
+
+#public aqi
+PUB_WEATHER_URL = 'https://api.seniverse.com/v3/weather/now.json'
+PUB_AQI_URL = 'https://api.seniverse.com/v3/air/now.json'
+LOCATION = 'wuxi'
+WEATHER_PUB_KEY = 'PUgI5CMJ_J_sLmhRa'
+WEATHER_PRIVATE_KEY = 'SGwWbo2gFb72AxpB7'
