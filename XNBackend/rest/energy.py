@@ -3,6 +3,7 @@ import json
 import random
 from flask_restful import Resource, reqparse
 from flask import current_app
+from XNBackend.utils import form_float
 
 
 floor_parser = reqparse.RequestParser()
@@ -127,10 +128,10 @@ class EnergyShow(Resource):
             ac_value = self.get_r_value(ac_key)
             socket_value = self.get_r_value(socket_key)
 
-            normalized_light_value = light_value[0]/1000
-            normalized_ac_value = ac_value[0]/1000
-            normalized_socket_value = socket_value[0]/1000
-            room_power = normalized_light_value + normalized_ac_value + normalized_socket_value
+            normalized_light_value = form_float(light_value[0]/1000)
+            normalized_ac_value = form_float(ac_value[0]/1000)
+            normalized_socket_value = form_float(socket_value[0]/1000)
+            room_power = form_float(normalized_light_value + normalized_ac_value + normalized_socket_value)
 
             data_dict[str(room)] = (room_power,
                                     normalized_light_value,
