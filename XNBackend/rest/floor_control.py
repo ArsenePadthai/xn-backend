@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse
 import concurrent.futures
 from XNBackend.api_client.light import sp_control_light
+from XNBackend.tasks.sensor.tasks import network_relay_control_sync
 from XNBackend.models import SwitchPanel, AirConditioner
 from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition, periodic_query_air_condition
 from XNBackend.utils import get_socket_client
