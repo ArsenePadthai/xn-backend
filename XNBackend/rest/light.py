@@ -26,7 +26,7 @@ class LightControl(Resource):
 
         try:
             client = get_panel_client(sp.tcp_config.ip, 4196)
-            ret = query_panel_status(client, sp.tcp_config.ip, sp.batch_no, sp.addr_no)
+            ret = query_panel_status(client, sp.batch_no, sp.addr_no)
             s_1 = ret[-5]
             s_2 = ret[-4]
             s_3 = ret[-3]

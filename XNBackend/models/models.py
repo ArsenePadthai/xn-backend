@@ -89,6 +89,8 @@ class Locators(db.Model, TimeStampMixin):
     coorX = db.Column(Float, nullable=True)
     coorY = db.Column(Float, nullable=True)
     coorZ = db.Column(Float, nullable=True)
+    # eco mode, 0 means off, 1 means on
+    eco_mode = db.Column(SmallInteger)
 
 
 class TcpConfig(db.Model, TimeStampMixin):

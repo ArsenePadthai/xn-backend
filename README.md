@@ -66,18 +66,42 @@ update 2019.12.02 决定对于红外设备，不采用latest_record_id, 删除IR
 
 ### ECO Design Memo
 #### Definition
-1. There are two modes under ECO mode. One is work mode, the other is off-work mode. 
-If current time is *between 8:00 and 17:00*, it is under work mode. If current time 
-is out of previous time range, it is off work mode.
+> eco mode used to detect spare rooms. For spare rooms, light will be automatically turned off to save energy.
 
-2. Under ECO mode, if certain conditions are satisfied (will be defined below), 
-the server will take certain actions. 
-```For work mode, actions will be turning off main light and set air condition to fan mode.```
-```For off work mode, actions will be turning both main light and aux light off, and setting air condition to fan mode.```
+##### There are some design strategies for eco mode
+1. There are two modes under ECO mode.
+    * Work Mode: **between 8:00 and 17:00**
+    * Offwork mode: **rest**
 
-3. How to set ECO mode?
+2. For each room, there is a flag to mark the room. If this room is marked as eco mode. Then backend task will periodically 
+check the room - if it is an empty room. If the marked room meets some criterion during periodic check, then actions will be
+triggered.
 
 
+3. Actions
+   * Turning off main light and set air condition to fan mode.
+   * Turning both main light and aux light off, and setting air condition to fan mode.
+
+4. How to set ECO mode?
+    * From switch panel, there is an eco mode setting buttons, press the button for a specific room, the room will be marked
+    as eco mode room.
+    * eco mode setting api - just for demo!
+   
+5. Eco exit mechanism
+    * when eco mode is active, pressing that eco button again will disable eco mode.
+    * when a person press light button will disable eco mode for one eco cycle.
+
+6. Conditions to trigger actions in eco mode \
+   Use a prefix ```IRCOUNT_``` in redis to store how many times a room is identified as an empty room. For example, 
+   A key IRCOUNT_501 stores a value how many times 501 is identified as empty. 
+   
+   * If a room is empty at the checkpoint, the IRCOUNT_ value will +1 without any question.
+   * If a room is occupied at the checkpoint, and if the value is 1, then reset it to zero.
+   * if the value of IRCOUNT_ is exactly 2, then execute eco action.
+  
+7. Condition to cancel eco mode  \
+Eco cancellation condition actually conflicts with ZLAN tcp heartbeat mechanism. The heartbeat mechanism has to be removed
+to get eco cancellation to work.
 
 
 ### blueprint make alarm service as microservice

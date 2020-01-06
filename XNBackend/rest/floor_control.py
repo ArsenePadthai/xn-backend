@@ -1,9 +1,13 @@
 import logging
+import time
+from flask import current_app
 from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse
-from XNBackend.models import db, SwitchPanel, AirConditioner
-from XNBackend.tasks.sensor.tasks import network_relay_control_sync
+import concurrent.futures
+from XNBackend.api_client.light import sp_control_light
+from XNBackend.models import SwitchPanel, AirConditioner
 from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition, periodic_query_air_condition
+from XNBackend.utils import get_socket_client
 
 L = logging.getLogger(__name__)
 
@@ -22,6 +26,16 @@ floor_control_parser.add_argument('resource_type',
                                   help='please provide control resource type 0 means light, 1 means air condition')
 
 
+def sp_control_inline(tcp_obj, sp_list):
+    conn = get_socket_client(tcp_obj.ip,
+                             current_app.config['ZLAN_PORT'],
+                             timeout=5)
+    time.sleep(0.5)
+    for sp in sp_list:
+        sp_control_light(conn, sp, main=0, aux=0)
+        time.sleep(0.5)
+
+
 class FloorControl(Resource):
     @jwt_required
     def patch(self):
@@ -32,22 +46,17 @@ class FloorControl(Resource):
 
         # light control
         if resource_type == 0:
-            switch_panel = SwitchPanel.query(SwitchPanel.locator_id.like(str(floor)+'%'))
-            switch_panel_4_buttons = switch_panel.query(SwitchPanel.panel_type == 0)
-            switch_panel_2_buttons = switch_panel.query(SwitchPanel.panel_type == 1)
+            switch_panels = SwitchPanel.query(SwitchPanel.locator_id.like(str(floor)+'%'))
+            sp_collection = {}
+            for sp in switch_panels:
+                if sp.tcp_config not in sp_collection:
+                    sp_collection[sp.tcp_config] =[sp]
+                else:
+                    sp_collection[sp.tcp_config].append(sp)
 
-            for sw in switch_panel_4_buttons.belong_switches + switch_panel_2_buttons.belong_switches:
-                for r in sw.belong_relays:
-                    network_relay_control_sync.apply_async(args=[r.id, action], queue='relay')
-                sw.status = action
-                db.session.flush()
-            try:
-                db.session.commit()
-                return {"code": 0, "message": "ok"}
-            except Exception as e:
-                db.session.rollback()
-                L.exception(e)
-                return {"code": -1, "message": "failed to control floor light"}
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                executor.map(sp_control_inline, sp_collection.items())
+            return {"code": 0, "message": "light cmd sent"}
 
         # air condition control
         elif resource_type == 1:

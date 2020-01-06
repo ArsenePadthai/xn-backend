@@ -162,3 +162,4 @@ alembic.ini
 requirements.txt
 celerybeat.pid
 scripts/ir_single.py
+run_flask.bat

@@ -2,6 +2,7 @@ from flask_restful import Resource, reqparse
 from datetime import datetime, timedelta
 from flask import current_app
 from XNBackend.models import EnergyConsumeDaily, S3FC20
+from XNBackend.utils import form_float
 
 time_range_parse = reqparse.RequestParser()
 time_range_parse.add_argument('start',
@@ -46,12 +47,12 @@ class ElectricConsumeByDay(Resource):
             else:
                 measure_name = 'socket'
                 socket += enery_consume.electricity
-            detail[this_room][measure_name] = int(enery_consume.electricity)
+            detail[this_room][measure_name] = form_float(enery_consume.electricity)
 
         time_key = time_marker.strftime('%Y-%m-%d')
-        return {time_key: {"light": int(light),
-                           "ac": int(ac),
-                           "socket": int(socket),
+        return {time_key: {"light": form_float(light),
+                           "ac": form_float(ac),
+                           "socket": form_float(socket),
                            "detail": detail}
                 }
 
