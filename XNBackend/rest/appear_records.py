@@ -20,7 +20,8 @@ appear_fields = {
     'sex': fields.String,
     'certificateNum': fields.String,
     'happenTime': MyDateTime(attribute='happenTime'),
-    'facePicture': fields.String
+    'facePicture': fields.String,
+    'type': fields.Integer
 }
 
 

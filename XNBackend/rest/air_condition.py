@@ -51,9 +51,6 @@ class AirConditionControl(Resource):
         send_cmd_to_air_condition.apply_async(args=[device_index_code],
                                               kwargs=kwarg_control,
                                               queue="general")
-        # update_specific_air_condition.apply_async(args=[device_index_code],
-        #         #                                           queue='general',
-        #         #                                           countdown=10)
         return {'errMsg': 'ok'}
 
     def get(self):

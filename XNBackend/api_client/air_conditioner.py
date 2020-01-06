@@ -3,6 +3,7 @@ import requests
 import hashlib
 import json
 import logging
+import redis
 from flask import current_app
 
 L = logging.getLogger(__name__)
@@ -58,6 +59,9 @@ def set_ac_data(device_code: str, **kwargs):
             return {"errMsg": errMsg,
                     "errCode": errCode}
         else:
+            R = redis.Redis(host=current_app.config['REDIS_HOST'],
+                            port=current_app.config['REDIS_PORT'])
+            R.set('SKIP_' + device_code, json.dumps(1), ex=45)
             return {"errMsg": 'ok',
                     "writeResult": content.get('writeResult')}
     except Exception as e:

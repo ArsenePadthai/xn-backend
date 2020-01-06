@@ -42,7 +42,8 @@ class AcsCallback(Resource):
                             cameraIndexCode=cameraIndexCode,
                             deviceName=deviceName,
                             eventType=e['eventType'],
-                            happenTime=happenTime
+                            happenTime=happenTime,
+                            type=0
                         )
                         db.session.add(ap_record)
                         db.session.commit()

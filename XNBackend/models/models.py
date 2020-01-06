@@ -151,6 +151,8 @@ class AppearRecords(db.Model, TimeStampMixin):
     deviceName = db.Column(Unicode(length=LONG_LEN_100))
     eventType = db.Column(Integer)
     happenTime = db.Column(TIMESTAMP)
+    # 0 means important target, 1 means stranger
+    type = db.Column(SmallInteger)
 
 
 class LatestPosition(db.Model, TimeStampMixin):
