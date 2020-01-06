@@ -1,9 +1,21 @@
 import logging
+import redis
 from XNBackend.tasks import celery
 from XNBackend.models import db, AirConditioner
 from XNBackend.api_client.air_conditioner import get_ac_data, set_ac_data
+from XNBackend.utils import get_redis_value
 
 L = logging.getLogger(__name__)
+
+
+def check_skip(device_index_code):
+    R_conn = redis.Redis(host=celery.flask_app.config['REDIS_HOST'],
+                         port=celery.flask_app.config['REDIS_PORT'])
+    value = get_redis_value(R_conn, 'SKIP_' + device_index_code)
+    if value:
+        return False
+    else:
+        return True
 
 
 @celery.task()
@@ -13,6 +25,9 @@ def periodic_query_air_condition():
         devices_with_keys[a.device_index_code] = a
 
     device_codes = list(devices_with_keys.keys())
+    tmp_device_codes = list(filter(check_skip, device_codes))
+    device_codes = tmp_device_codes
+
     all_data = get_ac_data(device_codes)
     if all_data.get('errMsg') == 'ok':
         for each_data in all_data['data']:
