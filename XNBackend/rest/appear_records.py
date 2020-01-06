@@ -14,6 +14,9 @@ time_parser.add_argument('end',
                          required=True,
                          type=lambda x: datetime.strptime(x, '%Y-%m-%dT%H:%M:%S'),
                          help='need end time')
+time_parser.add_argument('type',
+                         required=False,
+                         type=int)
 
 appear_fields = {
     'name': fields.String,
@@ -33,6 +36,7 @@ class AppearRecordsApi(Resource):
         # TODO ADD COMPARE FOR START AND END
         start = args.get('start')
         end = args.get('end')
+        target_type = args.get('type')
 
         subq = AppearRecords.query\
             .with_entities(AppearRecords.certificateNum, func.max(AppearRecords.happenTime).label('maxtime'))\
@@ -44,6 +48,7 @@ class AppearRecordsApi(Resource):
             .join(subq,
                   and_(AppearRecords.certificateNum == subq.c.certificateNum,
                        AppearRecords.happenTime == subq.c.maxtime))\
+            .filter(AppearRecords.type == target_type)\
             .order_by(AppearRecords.happenTime.desc())\
             .all()
         return a
