@@ -1,6 +1,5 @@
 import logging
 import time
-from flask import current_app
 from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse
 import concurrent.futures
@@ -26,14 +25,22 @@ floor_control_parser.add_argument('resource_type',
                                   help='please provide control resource type 0 means light, 1 means air condition')
 
 
-def sp_control_inline(tcp_obj, sp_list):
-    conn = get_socket_client(tcp_obj.ip,
-                             current_app.config['ZLAN_PORT'],
-                             timeout=5)
-    time.sleep(0.5)
-    for sp in sp_list:
-        sp_control_light(conn, sp, main=0, aux=0)
+def sp_control_inline(args):
+    tcp_obj = args[0]
+    sp_list = args[1]
+    main = args[2]
+    aux = args[2]
+    try:
+        conn = get_socket_client(tcp_obj.ip,
+                                 4196,
+                                 timeout=5)
         time.sleep(0.5)
+        for sp in sp_list:
+            sp_control_light(conn, sp, main=main, aux=aux)
+            time.sleep(0.5)
+        conn.close()
+    except Exception as e:
+        L.exception(e)
 
 
 class FloorControl(Resource):
@@ -46,27 +53,28 @@ class FloorControl(Resource):
 
         # light control
         if resource_type == 0:
-            switch_panels = SwitchPanel.query(SwitchPanel.locator_id.like(str(floor)+'%'))
+            switch_panels = SwitchPanel.query.filter(SwitchPanel.locator_id.like(str(floor)+'%'))
             sp_collection = {}
             for sp in switch_panels:
+                if sp.tcp_config is None:
+                    continue
                 if sp.tcp_config not in sp_collection:
                     sp_collection[sp.tcp_config] =[sp]
                 else:
                     sp_collection[sp.tcp_config].append(sp)
-
+            arg_group = [(k, v, action) for k, v in sp_collection.items()]
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-                executor.map(sp_control_inline, sp_collection.items())
+                executor.map(sp_control_inline, arg_group)
             return {"code": 0, "message": "light cmd sent"}
 
         # air condition control
         elif resource_type == 1:
             air_conditions = AirConditioner.query.filter(AirConditioner.locator_id.like(str(floor) + '%'))
             device_index_codes = [ac.device_index_code for ac in air_conditions]
-            send_cmd_to_air_condition.apply_async(args=device_index_codes,
-                                                  kwargs={"StartStopStatus": action},
-                                                  queue="general")
-            periodic_query_air_condition.apply_async(countdown=15)
+            for d_code in device_index_codes:
+                print(d_code)
+                send_cmd_to_air_condition.apply_async(args=[d_code],
+                                                      kwargs={"StartStopStatus": action},
+                                                      queue="general")
             return {"code": 0, "message": "air condition cmd sent"}
-
-
 

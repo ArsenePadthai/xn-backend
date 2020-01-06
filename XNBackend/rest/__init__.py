@@ -22,7 +22,6 @@ api = Api(dashboard_api_bp)
 api.add_resource(LightControl, '/api/control/light')
 api.add_resource(AcsControl, '/api/control/acs')
 api.add_resource(AirConditionControl, '/api/control/air_condition')
-
 api.add_resource(MantunciBoxAlarm, '/api/dashboard/alarm')
 api.add_resource(Energy, '/api/dashboard/energy')
 api.add_resource(Env, '/api/dashboard/env')
@@ -46,7 +45,7 @@ api.add_resource(NotificationApi, '/api/dashboard/notification')
 api.add_resource(ElectricConsumeByDay, '/api/dashboard/electric_consume_day')
 api.add_resource(ElectricConsumeByMonth, '/api/dashboard/electric_consume_month')
 api.add_resource(AppearRecordsApi, '/api/dashboard/appear_records')
-api.add_resource(FloorControl, '/api/dashboard/floor_control')
+api.add_resource(FloorControl, '/api/control/floor_control')
 api.add_resource(DoorEvent, '/api/dashboard/door_event')
 
 
