@@ -35,6 +35,6 @@ def ac_info_from_model(ac_model_instance):
         "set_speed": ac_model_instance.desired_speed,
         "set_mode": ac_model_instance.desired_mode,
         "temperature": ac_model_instance.temperature,
-        "ac_model_instance_on": True if ac_model_instance.ac_on else False,
+        "ac_on": True if ac_model_instance.ac_on else False,
         "set_temperature": ac_model_instance.desired_temperature
     }

@@ -15,6 +15,7 @@ from .notification import NotificationApi
 from .electric_consume import ElectricConsumeByDay, ElectricConsumeByMonth
 from .appear_records import AppearRecordsApi
 from .floor_control import FloorControl
+from .door_event import DoorEvent
 
 api = Api(dashboard_api_bp)
 
@@ -46,5 +47,6 @@ api.add_resource(ElectricConsumeByDay, '/api/dashboard/electric_consume_day')
 api.add_resource(ElectricConsumeByMonth, '/api/dashboard/electric_consume_month')
 api.add_resource(AppearRecordsApi, '/api/dashboard/appear_records')
 api.add_resource(FloorControl, '/api/dashboard/floor_control')
+api.add_resource(DoorEvent, '/api/dashboard/door_event')
 
 
