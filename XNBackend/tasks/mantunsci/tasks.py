@@ -101,7 +101,6 @@ def periodic_electricity_usage_day():
         auth_param['redirect_uri'],
     )
     current_time = datetime.now() + timedelta(days=-1)
-    aa=0
     for mb in mbs:
         L.debug('====================start debug=================')
         L.debug(current_time.month)
@@ -120,12 +119,8 @@ def periodic_electricity_usage_day():
                                     auth_param['router_uri'],
                                     auth_param['project_code'])
         elec_day.load_data_from_response(req_body)
-        L.debug('====================check records===============')
-        L.debug(elec_day.records)
-        aa+=len(elec_day.records)
-        L.debug('====================end debug=================')
+        elec_day.compress_records()
         elec_day.save_data(db_session=session)
-    L.debug(aa)
 
 
 @celery.task()
@@ -159,5 +154,3 @@ def periodic_sync_alarm_data():
         energy_alarm.load_data_from_response(req_body)
         for i in energy_alarm.records:
             print(i)
-
-

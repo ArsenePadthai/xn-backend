@@ -24,7 +24,8 @@ appear_fields = {
     'certificateNum': fields.String,
     'happenTime': MyDateTime(attribute='happenTime'),
     'facePicture': fields.String,
-    'type': fields.Integer
+    'type': fields.Integer,
+    'deviceName': fields.String
 }
 
 

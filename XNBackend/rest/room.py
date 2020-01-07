@@ -2,8 +2,7 @@ import redis
 import json
 from flask import current_app
 from flask_restful import Resource, reqparse
-from XNBackend.models import Switches, AirConditioner, Relay
-from XNBackend.api_client.air_conditioner import get_ac_data
+from XNBackend.models import Switches, AirConditioner, Relay, Door
 from XNBackend.rest.utils import ac_info_from_model
 
 
@@ -35,8 +34,11 @@ class Room(Resource):
                 ir_value = 1
             elif 0 in value[0]:
                 ir_value = 0
-
-        acs_lock_value = True
+        door = Door.query.filter(Door.room_no_internal.like(str(room_number))).first()
+        if door:
+            acs_lock_value = True
+        else:
+            acs_lock_value = False
 
         room_switch = Switches.query.filter(Switches.switch_panel.has(locator_id=str(room_number)))
         main_switch = room_switch.filter(Switches.channel == 1).first()

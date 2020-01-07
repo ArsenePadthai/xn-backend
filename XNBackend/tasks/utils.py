@@ -131,8 +131,21 @@ class EnergyConsumeDay(ElectriConsumeHour):
                 if s3fc20:
                     record = EnergyConsumeDaily(s3_fc20_id=s3fc20.id,
                                                 updated_at=happen_time,
-                                                electricity=entry['electricity'])
+                                                electricity=entry['electricity'],
+                                                s3_fc20=s3fc20)
                     self.records.append(record)
+
+    def compress_records(self):
+        record_dict = {}
+        for r in self.records:
+            if r.s3_fc20.desc not in record_dict:
+                record_dict[r.s3_fc20.desc] = r
+            else:
+                elec_prev = record_dict[r.s3_fc20.desc].electricity
+                elec_now = r.electricity
+                total = elec_now + elec_prev
+                record_dict[r.s3_fc20.desc].electricity = total
+        self.records = list(record_dict.values())
 
 
 class EnergyAlarm(ElectriConsumeHour):
