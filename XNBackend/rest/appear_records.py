@@ -39,19 +39,22 @@ class AppearRecordsApi(Resource):
         end = args.get('end')
         target_type = args.get('type')
 
-        subq = AppearRecords.query\
-            .with_entities(AppearRecords.certificateNum, func.max(AppearRecords.happenTime).label('maxtime'))\
-            .filter(AppearRecords.happenTime > start)\
-            .filter(AppearRecords.happenTime < end)\
-            .group_by(AppearRecords.certificateNum)\
+        subq = AppearRecords.query \
+            .with_entities(AppearRecords.certificateNum, func.max(AppearRecords.happenTime).label('maxtime')) \
+            .filter(AppearRecords.happenTime > start) \
+            .filter(AppearRecords.happenTime < end) \
+            .group_by(AppearRecords.certificateNum) \
             .subquery('t2')
-        a = AppearRecords.query\
+
+        q = AppearRecords.query \
             .join(subq,
                   and_(AppearRecords.certificateNum == subq.c.certificateNum,
-                       AppearRecords.happenTime == subq.c.maxtime))\
-            .filter(AppearRecords.type == target_type)\
-            .order_by(AppearRecords.happenTime.desc())\
-            .all()
+                       AppearRecords.happenTime == subq.c.maxtime))
+
+        if target_type:
+            a = q.filter(AppearRecords.type == target_type) \
+                .order_by(AppearRecords.happenTime.desc()) \
+                .all()
+        else:
+            a = q.order_by(AppearRecords.happenTime.desc()).all()
         return a
-
-

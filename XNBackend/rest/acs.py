@@ -26,10 +26,10 @@ class AcsControl(Resource):
         if room_no:
             success = []
             failed = []
-            doors = Door.query.filter(Door.room_no_external.like(args.get("room_no"))).all()
+            doors = Door.query.filter(Door.room_no_internal.like(room_no+"%")).all()
             for d in doors:
                 ret = open_door(d.door_index_code)
-                if ret['code'] == 0:
+                if ret['code'] == '0':
                     success.append(d.door_index_code)
                 else:
                     failed.append(d.door_index_code)
