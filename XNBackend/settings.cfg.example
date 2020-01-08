@@ -29,8 +29,6 @@ low_exchange = Exchange('first', type='direct')
 high_exchange = Exchange('second', type='direct')
 
 
-CELERY_TIMEZONE = 'Asia/Shanghai'
-
 CELERYBEAT_SCHEDULE = {
     "query_air_condition": {
         'task': 'XNBackend.tasks.air_condition.tasks.periodic_query_air_condition',
@@ -68,6 +66,15 @@ FLOOR_ROOM_MAPPING = {
     9: range(901, 905),
     }
 
+AQI_ROOMS = {
+    3: ['504', '505', '516', '507', '515'],
+    4: ['504', '505', '516', '507', '515'],
+    5: ['504', '505', '516', '507', '515'],
+    6: ['504', '505', '516', '507', '515'],
+    7: ['504', '505', '516', '507', '515'],
+    9: ['504', '505', '516', '507', '515'],
+    }
+
 # electricity price for kwh
 UNIT_PRICE = 0.6
 
@@ -89,9 +96,17 @@ REDIS_HOST = '127.0.0.1'
 # zlan part
 ZLAN_PORT = 4196
 
-#public aqi
+# public aqi
 PUB_WEATHER_URL = 'https://api.seniverse.com/v3/weather/now.json'
 PUB_AQI_URL = 'https://api.seniverse.com/v3/air/now.json'
 LOCATION = 'wuxi'
 WEATHER_PUB_KEY = 'PUgI5CMJ_J_sLmhRa'
 WEATHER_PRIVATE_KEY = 'SGwWbo2gFb72AxpB7'
+
+# hikvision part
+HIK_APP_KEY = '23102000'
+HIK_APP_SECRET = 'zWhDBVjPsWYH3ZEVEjG8'
+
+# eco part
+# eco count mean only trigger action after n times detected no man IN A ROW
+ECO_COUNT = 4

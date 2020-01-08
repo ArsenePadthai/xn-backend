@@ -80,7 +80,7 @@ class AirCondition(Resource):
 
         for room in room_range:
             room_air_conditions = AirConditioner.query\
-                .filter(AirConditioner.locator.has(zone=int(room))).all()
+                .filter(AirConditioner.locator.has(internal_code=str(room))).all()
             if room_air_conditions:
                 status_dict[str(room)] = dict()
             for room_ac in room_air_conditions:

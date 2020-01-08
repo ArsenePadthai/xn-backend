@@ -1,10 +1,29 @@
 import json
 import pytz
 from datetime import datetime
-from XNBackend.models import db, S3FC20, MantunciBox, EnergyConsumeByHour, EnergyConsumeDaily, BoxAlarms
+from XNBackend.models import db, S3FC20, MantunciBox, EnergyConsumeByHour, EnergyConsumeDaily, BoxAlarms, \
+UniAlarms
 from XNBackend.tasks import logger
 
 L = logger.getChild(__name__)
+ALARM_MAPPING = {
+    1: '未知报警',
+    2: '短路报警',
+    3: '漏电报警',
+    4: '过载报警',
+    5: '过压报警',
+    6: '欠压报警',
+    7: '温度报警',
+    8: '浪涌报警',
+    9: '漏电保护功能正常',
+    10: '漏电保护自检未完成',
+    11: '打火报警',
+    12: '漏电预警',
+    13: '电流预警',
+    14: '过压预警',
+    15: '欠压预警',
+    16: '通讯报警'
+}
 
 
 def get_s3fc20_addr_mapping(mb_mac):
@@ -22,6 +41,28 @@ def get_mantunsci_addr_mapping():
     return mantunsci_dict
 
 
+def find_room(mac, addr, room_mapping):
+    mac_mapping = room_mapping.get(mac)
+    if not mac_mapping:
+        return
+    else:
+        room = mac_mapping.get(addr)
+        if not room:
+            return
+        return room[0]
+
+
+def find_level(type_number: int) ->int:
+    if type_number in [1, 2, 3, 4, 5, 6, 7, 8]:
+        return 1
+    elif type_number in [0, 11, 12, 13, 14, 15]:
+        return 2
+    elif type_number in [16, 10]:
+        return 3
+    else:
+        return 4
+
+
 class S3FC20RealTimePower:
     def __init__(self, content, room_mapping):
         self.power = content['aW']
@@ -37,7 +78,7 @@ class S3FC20RealTimePower:
         rds_client.set(key, value)
 
     def __str__(self):
-        return self.room + ':' + str(self.power) + ':' + str(self.time)
+        return self.room + '-----' + str(self.measure) + '--------'+ str(self.power) + '--------' + str(self.time)
 
 
 class MantunsciBase:
@@ -57,6 +98,31 @@ class MantunsciBase:
         raise NotImplementedError
 
     def save_data(self, *args):
+        raise NotImplementedError
+
+    def compress_records(self):
+        record_dict = {}
+        for r in self.records:
+            uni_key = self.get_uni_key(r)
+            if uni_key not in record_dict:
+                record_dict[uni_key] = r
+            else:
+                prev_value = self.get_value_from_key(record_dict[uni_key])
+                now_value = self.get_value_from_key(r)
+                total = prev_value + now_value
+                self.set_value(record_dict[uni_key], total)
+        self.records = list(record_dict.values())
+
+    @staticmethod
+    def get_uni_key(record):
+        raise NotImplementedError
+
+    @staticmethod
+    def get_value_from_key(target):
+        raise NotImplementedError
+
+    @staticmethod
+    def set_value(obj, value):
         raise NotImplementedError
 
 
@@ -82,6 +148,19 @@ class MantunsciRealTimePower(MantunsciBase):
     def save_data(self):
         for s in self.records:
             s.save_to_rds(self.rds_client, '_')
+
+    @staticmethod
+    def get_uni_key(record):
+        key = '_'.join(['RTE', str(record.room), str(record.measure)])
+        return key
+
+    @staticmethod
+    def get_value_from_key(target):
+        return getattr(target, 'power')
+
+    @staticmethod
+    def set_value(obj, value):
+        setattr(obj, 'power', value)
 
 
 class ElectriConsumeHour(MantunsciBase):
@@ -135,17 +214,17 @@ class EnergyConsumeDay(ElectriConsumeHour):
                                                 s3_fc20=s3fc20)
                     self.records.append(record)
 
-    def compress_records(self):
-        record_dict = {}
-        for r in self.records:
-            if r.s3_fc20.desc not in record_dict:
-                record_dict[r.s3_fc20.desc] = r
-            else:
-                elec_prev = record_dict[r.s3_fc20.desc].electricity
-                elec_now = r.electricity
-                total = elec_now + elec_prev
-                record_dict[r.s3_fc20.desc].electricity = total
-        self.records = list(record_dict.values())
+    @staticmethod
+    def get_uni_key(record):
+        return record.s3_fc20.desc
+
+    @staticmethod
+    def get_value_from_key(target):
+        return getattr(target, 'electricity')
+
+    @staticmethod
+    def set_value(obj, value):
+        setattr(obj, 'electricity', value)
 
 
 class EnergyAlarm(ElectriConsumeHour):
@@ -155,14 +234,25 @@ class EnergyAlarm(ElectriConsumeHour):
         if resp['code'] == '0':
             datas = resp['data']['datas']
             for entry in datas:
-                b_a = BoxAlarms(id=int(entry['auto_id']),
-                                addr=int(entry['addr']),
-                                node=entry['node'],
-                                alarm_or_type=entry['type'],
-                                time=datetime.strptime(entry['time'], '%Y-%m-%d %H:%M'),
-                                info=entry['info'],
-                                type_number=entry.get('typeNumber'),
-                                box_id=self.mb_id
-                                )
-                self.records.append(b_a)
+                if entry['typeNumber'] == 9:
+                    continue
+                room = find_room(self.mac, entry['addr'], mapping)
+                external_id = entry['auto_id']
+                ua = UniAlarms.query.filter(UniAlarms.external_id == external_id).first()
+                if ua:
+                    continue
+                extra = json.dumps({"mac": self.mac, "addr": 1})
 
+                box_alarm = UniAlarms(
+                    external_id=entry['auto_id'],
+                    alarm_group=0,
+                    alarm_code=entry['typeNumber'],
+                    alarm_content=ALARM_MAPPING.get(entry['typeNumber']),
+                    room=room,
+                    floor=int(room[0]) if room else None,
+                    active=1,
+                    level=find_level(entry['typeNumber']),
+                    happen_time=datetime.strptime(entry['time'], '%Y-%m-%d %H:%M'),
+                    extra=extra
+                )
+                self.records.append(box_alarm)

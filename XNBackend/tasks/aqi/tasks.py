@@ -1,21 +1,57 @@
+# -*- coding:utf-8 -*-
 import socket
 import redis
 import json
 import time
 import logging
-import threading
+import concurrent.futures
+from datetime import datetime
 from XNBackend.tasks import celery
 from XNBackend.api_client.aqi_client import query_aqi_value
 from XNBackend.api_client.ir_client import query_ir_status
 from XNBackend.api_client.public_aqi import request_weather_info
-from XNBackend.models import AQISensors, IRSensors
-from XNBackend.utils import get_socket_client
+from XNBackend.api_client.light import sp_control_light
+from XNBackend.models import AQISensors, IRSensors, SwitchPanel, Switches
+from XNBackend.utils import get_socket_client, close_conn
 
 
 L = logging.getLogger(__name__)
 
 
-def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
+def is_work_begin_time():
+    now = datetime.now()
+    start = now.replace(hour=8, minute=0, second=0)
+    end = now.replace(hour=9, minute=30, second=0)
+    return start <= now <= end
+
+
+# TODO optimize
+@celery.task()
+def turn_on_room_light(room_str):
+    sp = SwitchPanel.query.filter(SwitchPanel.locator_id == room_str).first()
+    if not sp:
+        L.error(f'room {room_str} has no sp.')
+        return
+    sw = Switches.query.filter(Switches.switch_panel_id == sp.id).filter(Switches.channel == 1).first()
+    if sw and sw.status == 1:
+        L.debug('already on==========')
+        return
+    ip = sp.tcp_config.ip
+    port = 4196
+    tcp_conn = get_socket_client(ip, port, timeout=5)
+    if not tcp_conn:
+        L.error(f'can not build connection to zlan ip {ip}')
+        return
+    sp_control_light(tcp_conn, sp, main=1)
+    close_conn(tcp_conn)
+
+
+# def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
+def update_aqi_ir_task(args):
+    tcp_obj = args[0]
+    sensor_list = args[1]
+    redis_conn = args[2]
+
     timestamp = int(time.time())
     conn_client = get_socket_client(tcp_obj.ip,
                                     celery.flask_app.config['ZLAN_PORT'],
@@ -43,6 +79,8 @@ def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
                 if not value:
                     redis_conn.set(f'{prefix}_{s.locator}', json.dumps(([resp], timestamp)))
                 else:
+                    if resp == 1 and is_work_begin_time():
+                        turn_on_room_light.apply_async(args=[s.locator], queue='general')
                     load_value = json.loads(value)
                     if len(load_value) != 2:
                         return
@@ -60,29 +98,23 @@ def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
 
 @celery.task()
 def periodic_update_aqi_ir_value():
-    threads = []
     sensor_collection = {}
     f5_aqi_sensors = AQISensors.query.filter(AQISensors.locator_body.has(floor=5)).all()
     # f3_aqi_sensors = AQISensors.query.filter(AQISensors.locator_body.has(floor=3)).all()
     ir_sensors = IRSensors.query.filter(IRSensors.locator_body.has(floor=5)).all()
     R = redis.Redis(host=celery.flask_app.config['REDIS_HOST'],
                     port=celery.flask_app.config['REDIS_PORT'])
-
-    #for sensor in f5_aqi_sensors + f3_aqi_sensors + ir_sensors:
+    # for sensor in f5_aqi_sensors + f3_aqi_sensors + ir_sensors:
     for sensor in f5_aqi_sensors + ir_sensors:
         if sensor.tcp_config not in sensor_collection:
             sensor_collection[sensor.tcp_config] = [sensor]
         else:
             sensor_collection[sensor.tcp_config].append(sensor)
 
-    for k, v in sensor_collection.items():
-        t = threading.Thread(target=update_aqi_ir_task, args=(k, v, R))
-        threads.append(t)
-
-    for th in threads:
-        th.start()
-    for th in threads:
-        th.join()
+    args_group = [(k, v, R) for k, v in sensor_collection.items()]
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(update_aqi_ir_task, args_group)
+    return {"code": 0, "message": "light cmd sent"}
 
 
 @celery.task()
@@ -120,4 +152,3 @@ def periodic_update_outer_aqi():
               json.dumps(weather_info['humidity']))
     R_aqi.set('OUTER_pm25',
               json.dumps(int(aqi_info['pm25'])))
-

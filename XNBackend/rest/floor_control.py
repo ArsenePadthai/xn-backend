@@ -4,10 +4,9 @@ from flask_jwt_extended import jwt_required
 from flask_restful import Resource, reqparse
 import concurrent.futures
 from XNBackend.api_client.light import sp_control_light
-from XNBackend.tasks.sensor.tasks import network_relay_control_sync
 from XNBackend.models import SwitchPanel, AirConditioner
-from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition, periodic_query_air_condition
-from XNBackend.utils import get_socket_client
+from XNBackend.tasks.air_condition.tasks import send_cmd_to_air_condition
+from XNBackend.utils import get_socket_client, is_work_time
 
 L = logging.getLogger(__name__)
 
@@ -47,6 +46,8 @@ def sp_control_inline(args):
 class FloorControl(Resource):
     @jwt_required
     def patch(self):
+        if is_work_time():
+            return {"code": -1, "message": "can not batch control during work time."}
         args = floor_control_parser.parse_args()
         floor = args.get('floor')
         action = args.get('action')
@@ -78,4 +79,3 @@ class FloorControl(Resource):
                                                       kwargs={"StartStopStatus": action},
                                                       queue="general")
             return {"code": 0, "message": "air condition cmd sent"}
-

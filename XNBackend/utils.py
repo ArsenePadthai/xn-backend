@@ -1,6 +1,7 @@
 import socket
 import json
 import time
+from datetime import datetime
 
 
 def get_panel_client(ip, port):
@@ -51,5 +52,23 @@ def check_time_valid(ts, ts_gap=600):
 def form_float(number):
     """limit float to 2 decimal"""
     return float('%.2f' % number)
+
+
+def is_work_time() -> bool:
+    """return True if now is work time, else return False"""
+    now = datetime.now()
+    start = now.replace(hour=8, minute=0, second=0)
+    end = now.replace(hour=17, minute=0, second=0)
+    return start <= now <= end
+
+
+def close_conn(conn_obj):
+    try:
+        conn_obj.close()
+    except Exception as e:
+        pass
+
+
+
 
 

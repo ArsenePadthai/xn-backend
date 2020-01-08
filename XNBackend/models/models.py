@@ -155,6 +155,7 @@ class AppearRecords(db.Model, TimeStampMixin):
     happenTime = db.Column(TIMESTAMP)
     # 0 means important target, 1 means stranger
     type = db.Column(SmallInteger)
+    active = db.Column(SmallInteger, default=1)
 
 
 class LatestPosition(db.Model, TimeStampMixin):
@@ -547,9 +548,13 @@ class AirConditioner(db.Model, TimeStampMixin):
 
 class UniAlarms(db.Model, TimeStampMixin):
     __tablename__ = 'uni_alarms'
-    internal_id = db.Column(Integer, primary_key=True)
-    external_id = db.Column(Unicode(length=SHORT_LEN_30))
+    internal_id = db.Column(Integer, primary_key=True, autoincrement=True)
+    external_id = db.Column(Unicode(length=LONG_LEN_100))
     happen_time = db.Column(TIMESTAMP)
+    cancel_time = db.Column(TIMESTAMP)
+    # 0 mean electric alarm;
+    # 1 means acs alarm;
+    # 2 means elevator alarm
     alarm_group = db.Column(SmallInteger)
     alarm_code = db.Column(Integer)
     alarm_content = db.Column(Unicode(length=LONG_LEN_100))
@@ -558,3 +563,6 @@ class UniAlarms(db.Model, TimeStampMixin):
     extra = db.Column(Unicode(length=200))
     # 0 means confirmed, 1 means not confirm
     active = db.Column(SmallInteger)
+    # 1~3 1 means danger, 3 means less important
+    level = db.Column(SmallInteger)
+

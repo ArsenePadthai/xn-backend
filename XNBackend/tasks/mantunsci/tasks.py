@@ -3,7 +3,7 @@ import redis
 import requests
 from datetime import datetime, timedelta
 import logging
-from XNBackend.tasks import celery, logger
+from XNBackend.tasks import celery
 from XNBackend.tasks.utils import get_mantunsci_addr_mapping, MantunsciRealTimePower,\
     EnergyConsumeDay, ElectriConsumeHour, EnergyAlarm
 from XNBackend.models import db, MantunciBox
@@ -50,6 +50,7 @@ def periodic_realtime_power():
                                                    R,
                                                    req_body)
         realtime_mb_power.load_data_from_response(mapping)
+        realtime_mb_power.compress_records()
         realtime_mb_power.save_data()
 
 
@@ -125,6 +126,7 @@ def periodic_electricity_usage_day():
 
 @celery.task()
 def periodic_sync_alarm_data():
+    mapping = get_mantunsci_addr_mapping()
     mbs = MantunciBox.query
     session = db.session
     s = requests.Session()
@@ -136,7 +138,7 @@ def periodic_sync_alarm_data():
         auth_param['app_secret'],
         auth_param['redirect_uri'],
     )
-    current_time = datetime.now() + timedelta(days=-1)
+    current_time = datetime.now() + timedelta(minutes=-6)
     for mb in mbs:
         req_body = {
             "method": "GET_BOX_ALARM",
@@ -151,6 +153,5 @@ def periodic_sync_alarm_data():
             auth_param['router_uri'],
             auth_param['project_code']
         )
-        energy_alarm.load_data_from_response(req_body)
-        for i in energy_alarm.records:
-            print(i)
+        energy_alarm.load_data_from_response(req_body, mapping)
+        energy_alarm.save_data(db_session=session)

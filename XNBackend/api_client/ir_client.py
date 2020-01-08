@@ -11,7 +11,6 @@ def query_ir_status(addr, conn):
     try:
         conn.send(data)
         recv = conn.recv(1024)
-        L.info(recv)
         assert len(recv) == 8
         assert recv[1] == 0
         return recv[-2]

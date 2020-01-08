@@ -64,11 +64,11 @@ pipenv run flask run
 
 update 2019.12.02 决定对于红外设备，不采用latest_record_id, 删除IRSensorStatus这张表, 以及删除IRSensors中的column (latest_record_id, latest_record)
 
-### ECO Design Memo
-#### Definition
-> eco mode used to detect spare rooms. For spare rooms, light will be automatically turned off to save energy.
 
-##### There are some design strategies for eco mode
+#### Eco Design Document
+
+> eco mode used to detect spare rooms. For spare rooms, light will be automatically turned off to save energy.
+>
 1. There are two modes under ECO mode.
     * Work Mode: **between 8:00 and 17:00**
     * Offwork mode: **rest**
@@ -89,24 +89,28 @@ triggered.
    
 5. Eco exit mechanism
     * when eco mode is active, pressing that eco button again will disable eco mode.
-    * when a person press light button will disable eco mode for one eco cycle.
 
 6. Conditions to trigger actions in eco mode \
    Use a prefix ```IRCOUNT_``` in redis to store how many times a room is identified as an empty room. For example, 
    A key IRCOUNT_501 stores a value how many times 501 is identified as empty. 
    
    * If a room is empty at the checkpoint, the IRCOUNT_ value will +1 without any question.
-   * If a room is occupied at the checkpoint, and if the value is 1, then reset it to zero.
-   * if the value of IRCOUNT_ is exactly 2, then execute eco action.
+   * If a room is occupied at the checkpoint, and if the value is 1 or 2, then reset it to zero.
+   * If the value of IRCOUNT_ is exactly 2, then execute eco action.
   
 7. Condition to cancel eco mode  \
-Eco cancellation condition actually conflicts with ZLAN tcp heartbeat mechanism. The heartbeat mechanism has to be removed
-to get eco cancellation to work.
+The same as setting eco mode...
 
 
 ### blueprint make alarm service as microservice
+##### TODO LATER
+
+
+#### 2019-10-13
+1. 更新订阅事件
 
 
 
 
+#### 定时任务列表
  

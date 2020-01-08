@@ -2,7 +2,7 @@ import redis
 import json
 from flask import current_app
 from flask_restful import Resource, reqparse
-from XNBackend.models import Switches, AirConditioner, Relay, Door
+from XNBackend.models import Switches, AirConditioner, Relay, Door, Locators
 from XNBackend.rest.utils import ac_info_from_model
 
 
@@ -15,6 +15,8 @@ class Room(Resource):
         room_number = room_parser.parse_args().get('room')
         errMsg = []
         ac_info = []
+        room = Locators.query.filter(Locators.internal_code == str(room_number)).first()
+
         air_conditions = AirConditioner.query.filter(AirConditioner.locator_id == room_number).all()
         if not air_conditions:
             errMsg.append(f'{room_number} has no air condition')
@@ -34,7 +36,7 @@ class Room(Resource):
                 ir_value = 1
             elif 0 in value[0]:
                 ir_value = 0
-        door = Door.query.filter(Door.room_no_internal.like(str(room_number))).first()
+        door = Door.query.filter(Door.room_no_internal.like(str(room_number) + '%')).first()
         if door:
             acs_lock_value = True
         else:
@@ -56,5 +58,6 @@ class Room(Resource):
             "aux_light": aux_light_value,
             "acs_lock": acs_lock_value,
             "ir_sensor": ir_value,
-            "errMsg": 'ok' if not errMsg else ','.join(errMsg)
+            "errMsg": 'ok' if not errMsg else ','.join(errMsg),
+            "eco": room.eco_mode
         }

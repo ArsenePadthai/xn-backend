@@ -4,13 +4,14 @@ import time
 from threading import Thread
 from struct import pack, unpack
 from celery.signals import worker_process_init
-from sqlalchemy import create_engine, or_
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from enum import Enum
 
 from XNBackend.parser.protocol import data_parse
 from XNBackend.tasks import celery, logger
-from XNBackend.models.models import db, IRSensors, LuxValues, LuxSensors, Switches, SwitchPanel, Relay, TcpConfig, AutoControllers
+from XNBackend.models.models import db, IRSensors, LuxValues, LuxSensors, \
+    Switches, SwitchPanel, Relay, Locators
 
 
 L = logger.getChild(__name__)
@@ -111,6 +112,7 @@ def handle_ir_signal(data, ip):
             db.session.rollback()
 
 
+# TODO REWRITE
 @celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
     addr, status = unpack('>B', data[2:3])[0], data[3:-1]
@@ -121,6 +123,18 @@ def handle_switch_signal(data, ip):
             value = unpack('>B', status[i:i+1])[0] & 0x11 
             if panel.panel_type == 0:
                 switch = Switches.query.filter_by(channel=i+1, switch_panel_id=panel.id).first()
+
+                # ===============================================
+                # set eco mode - xxx
+                # ===============================================
+                room_no_str = panel.locator_id
+                room = Locators.query.filter(Locators.internal_code == room_no_str).first()
+                prev_eco = room.eco_mode
+                # TODO check if it is which digit is for eco for 4 buttons panel
+                now_eco = data[-3]
+                if prev_eco != now_eco:
+                    room.eco_mode = now_eco
+                    db.session.add(room)
             else:
                 if i == 2 or i == 3:
                     continue
@@ -156,9 +170,6 @@ def client_recv(ip, port, use_for):
             time.sleep(10)
             L.exception('try to restart child processes pool...')
             celery.control.pool_restart(reload=True, destination=['worker@'+ip+':'+str(port)])
-        if ip=='10.100.102.4':
-            L.debug('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            L.debug(recv_data)
 
         while int(len(recv_data)/8):
             data, recv_data = recv_data[0:8], recv_data[8:]
@@ -239,18 +250,3 @@ def relay_panel_control(relay_id, is_open):
     all_data = data_pre+data
     data_bytes = bytes.fromhex('DA')+pack('>B', panel.batch_no)+pack('>B', panel.addr_no)+pack('>B', 2)+bytes.fromhex(all_data)+bytes.fromhex('EE')
     client_send.apply_async(args = [data_bytes], queue = panel.tcp_config.ip+':'+str(panel.tcp_config.port))
-
-
-@celery.task()
-def tasks_route(sensor_name: str, channel, is_open, relay_id=None, zone=None):
-    if sensor_name == 'RelayControl':
-        network_relay_control_sync.apply_async(args=[relay_id, is_open], queue='relay')
-    elif sensor_name == 'LocatorControl':
-        panel = SwitchPanel.query.filter(SwitchPanel.locator_id == zone).first()
-        if not panel:
-            L.error(f'for zone {zone}, no panel can be found!')
-            return
-        switch = Switches.query.filter_by(switch_panel_id=panel.id, channel=channel).first()
-        for relay in Relay.query.filter_by(switch_id=switch.id).order_by():
-            network_relay_control_sync.apply_async(args=[relay.id, is_open], queue='relay')
-            L.info(f'remote control light-delay {relay.id}')

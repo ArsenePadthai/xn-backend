@@ -1,9 +1,34 @@
-from flask_restful import fields
+import json
+from flask_restful import fields, marshal_with, marshal
+from functools import wraps
+
+
+def marshal_v1(data, the_fields, extra, envelope=None):
+    ret = marshal(data, the_fields, envelope=envelope)
+    ret.update(extra)
+    return ret
+
+
+class marshal_with_extra(marshal_with):
+    def __call__(self, f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            resp = f(*args, **kwargs)
+            data, extra = resp
+            return marshal_v1(data, self.fields, extra, self.envelope)
+        return wrapper
 
 
 class MyDateTime(fields.Raw):
     def format(self, value):
+        if not value:
+            return None
         return value.strftime("%Y-%m-%d %H:%M:%S")
+
+
+class ExtraInfo(fields.Raw):
+    def format(self, value):
+        return json.loads(value)
 
 
 def extract_data(ac_data):

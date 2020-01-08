@@ -3,11 +3,12 @@ Description=Restart celery worker
 
 [Service]
 Type=simple
-User=xn
-WorkingDirectory=/home/xn/xn-backend
+User=xineng
+RuntimeDirectory=xnback
+WorkingDirectory=/home/xineng/xn-backend
 Environment=XN_SETTINGS=../settings.cfg
-ExecStart=/home/local/bin/pipenv run python -m celery -A XNBackend.app worker -c 1 -n worker@%i -Q %i --logfile=/var/log/xnback/%n.log
-Restart=always
+ExecStart=/usr/local/bin/pipenv run python -m celery -A XNBackend.app worker -c 1 -n worker@%i -Q %i -l info --pidfile=/run/xnback/sensor.pid --logfile=/var/log/xnback/%n.pid
+Restart=on-failure
 RestartSec=100ms
 
 [Install]
