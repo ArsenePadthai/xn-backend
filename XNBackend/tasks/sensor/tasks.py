@@ -36,7 +36,9 @@ def tcp_client(host, port, block=True):
 def keep_alive(ip, port, use_for):
     Session = sessionmaker(bind=ENGINE)
     session = Session()
+    count = 0
     while 1:
+        count += 1
         try:
             client
         except NameError:
@@ -52,7 +54,10 @@ def keep_alive(ip, port, use_for):
                                                            hex(obj.addr_no)[2:].rjust(2, '0')))
         try:
             client.send(data)
-            L.info('7777777777777777777777777777777777777777 sent data to client')
+            if count < 3:
+                L.info('keep alive has sent data to client')
+            if count == 1000:
+                count = 0
         except Exception:
             L.exception(f'failed to send query data to panel {panel.id}')
         time.sleep(10)
@@ -128,6 +133,7 @@ def handle_switch_signal(data, ip):
     if not the_panel:
         L.error(f'can not find the panel for ip {ip}')
         return
+    
     for i in range(len(status)):
         value = unpack('>B', status[i:i+1])[0] & 0x11
         if i == 0:
@@ -140,7 +146,7 @@ def handle_switch_signal(data, ip):
         elif i == 3 and the_panel.panel_type == 0:
             switch = Switches.query.filter_by(channel=i + 1, switch_panel_id=the_panel.id).first()
         else:
-            return
+            switch = None
 
         if switch is None or switch.status == value:
             continue
@@ -191,7 +197,6 @@ def client_recv(ip, port, use_for):
     L.info(f'ip {ip} start to recv data......')
     recv_data = bytearray()
     while True:
-        L.info(f'enter while loop ip {ip}')
         try:
             delta_data = client.recv(1024)
             if not delta_data:
