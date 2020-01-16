@@ -25,7 +25,7 @@ def tcp_client(host, port, block=True):
         pass
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if not block:
-        client.settimeout(15)
+        client.settimeout(25)
     client.connect((host, port))
     L.info('success Connected to %s: %s' % (host, port))
 
@@ -33,9 +33,7 @@ def tcp_client(host, port, block=True):
 def keep_alive(ip):
     Session = sessionmaker(bind=ENGINE)
     session = Session()
-    count = 0
     while 1:
-        count += 1
         try:
             client
         except NameError:
@@ -48,10 +46,7 @@ def keep_alive(ip):
                                                            hex(obj.addr_no)[2:].rjust(2, '0')))
         try:
             client.send(data)
-            if count < 3:
-                L.info('keep alive has sent data to client')
-            if count == 1000:
-                count = 0
+#            L.info(f'keep alive has sent data {data.hex()} to client {id(client)}')
         except Exception:
             L.exception(f'failed to send query data to panel {panel.id}')
         time.sleep(10)
@@ -106,10 +101,14 @@ def handle_switch_signal(data, ip):
             switch = Switches.query.filter_by(channel=i+1, switch_panel_id=the_panel.id).first()
         elif (i == 1 and the_panel.panel_type == 1) or (i == 2 and the_panel.panel_type == 0):
             room = Locators.query.filter(Locators.internal_code == the_panel.locator_id).first()
+            if not room:
+                L.error(f"can not find room for {the_panel}")
+                continue
             prev_eco = room.eco_mode
             if prev_eco != value:
                 room.eco_mode = value
                 db.session.add(room)
+                db.session.commit()
             continue
         elif i == 3 and the_panel.panel_type == 0:
             switch = Switches.query.filter_by(channel=i + 1, switch_panel_id=the_panel.id).first()
@@ -132,9 +131,13 @@ def handle_switch_signal(data, ip):
 def client_recv(ip, port):
     L.info(f'ip {ip} start to recv data......')
     recv_data = bytearray()
+    L.error("xxxxxxxxxxxxxxxxxxxxxxxxxx")
+    L.error(f'{id(client)} is ready to recv data............')
+    L.error("xxxxxxxxxxxxxxxxxxxxxxxxxx")
     while True:
         try:
             delta_data = client.recv(1024)
+#            L.error(f'data recved {delta_data.hex()}')
             if not delta_data:
                 raise Exception('Zero Data Received, need to restart child processes pool')
             recv_data += delta_data
@@ -154,7 +157,7 @@ def client_recv(ip, port):
             handle_switch_signal.apply_async(args=[data, ip], queue=ip+':'+str(port))
 
 
-@worker_process_init.connect(retry=True)
+@worker_process_init.connect
 def configure_workers(sender=None, **kwargs):
     try:
         assert '-n' in sys.argv, 'worker name must be assigned by -n'
@@ -176,10 +179,7 @@ def configure_workers(sender=None, **kwargs):
         thread.daemon = True
         thread_ka.daemon = True
         thread.start()
-        L.info('recv recv recv recv recv recv recv recv recv recv recv recv ')
-        time.sleep(2)
         thread_ka.start()
-        L.info('ka ka ka ka ka ka ka ka ka ka ka ka ka ka ka ka ka ka ka ')
     except Exception:
         L.exception('configure works failed')
         time.sleep(300)
