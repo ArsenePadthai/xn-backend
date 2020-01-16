@@ -46,6 +46,8 @@ def request_weather_info(req_type, location):
     full_url = url + '?' + f'ts={ts}&uid={uid}&location={location}&sig=' + sign_my_string(ts, uid)
     try:
         resp = requests.get(full_url)
+        if "results" not in resp.json():
+            return
     except Exception as e:
         L.exception('failed to get weather information')
         return

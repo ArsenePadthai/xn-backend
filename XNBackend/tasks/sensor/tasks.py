@@ -7,11 +7,8 @@ from celery.signals import worker_process_init
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from enum import Enum
-
-from XNBackend.parser.protocol import data_parse
 from XNBackend.tasks import celery, logger
-from XNBackend.models.models import db, IRSensors, LuxValues, LuxSensors, \
-    Switches, SwitchPanel, Relay, Locators
+from XNBackend.models.models import db, Switches, SwitchPanel, Relay, Locators
 
 
 L = logger.getChild(__name__)
@@ -33,7 +30,7 @@ def tcp_client(host, port, block=True):
     L.info('success Connected to %s: %s' % (host, port))
 
 
-def keep_alive(ip, port, use_for):
+def keep_alive(ip):
     Session = sessionmaker(bind=ENGINE)
     session = Session()
     count = 0
@@ -46,10 +43,7 @@ def keep_alive(ip, port, use_for):
             continue
 
         # require: CAN receive response after sending query data
-        if use_for == 'panel':
-            obj = session.query(SwitchPanel).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
-        else:
-            obj = session.query(IRSensors).filter(IRSensors.tcp_config.has(ip=ip)).first()
+        obj = session.query(SwitchPanel).filter(SwitchPanel.tcp_config.has(ip=ip)).first()
         data = bytes.fromhex('DA {} {} 86 86 86 EE'.format(hex(obj.batch_no)[2:].rjust(2, '0'),
                                                            hex(obj.addr_no)[2:].rjust(2, '0')))
         try:
@@ -61,17 +55,6 @@ def keep_alive(ip, port, use_for):
         except Exception:
             L.exception(f'failed to send query data to panel {panel.id}')
         time.sleep(10)
-
-
-@celery.task(serializer='pickle')
-def ir_query(batch_no, addr):
-    data = bytes.fromhex('DA') + pack('>B', batch_no) \
-        + pack('>B', addr) + bytes.fromhex('86 86 86 EE')
-    try:
-        assert client is not None, 'TCP client not initialized'
-        client.send(data)
-    except Exception as e:
-        L.exception(e)
 
 
 class panel(Enum):
@@ -103,23 +86,6 @@ def network_relay_control_sync(relay_id, is_open):
 
 
 @celery.task(serializer='pickle')
-def handle_ir_signal(data, ip):
-    addr = data[2]
-    status = data[-2]
-    ir = IRSensors.query.filter(IRSensors.addr_no == addr
-                                ).filter(IRSensors.tcp_config.has(ip=ip)).first()
-    L.debug(f'addr {addr}, status {status}, ir {ir}')
-    if ir:
-        ir.status = status
-        try:
-            db.session.commit()
-        except Exception as e:
-            L.exception(e)
-            db.session.rollback()
-
-
-# TODO REWRITE
-@celery.task(serializer='pickle')
 def handle_switch_signal(data, ip):
     addr, status = unpack('>B', data[2:3])[0], data[3:-1]
     try:
@@ -138,15 +104,17 @@ def handle_switch_signal(data, ip):
         value = unpack('>B', status[i:i+1])[0] & 0x11
         if i == 0:
             switch = Switches.query.filter_by(channel=i+1, switch_panel_id=the_panel.id).first()
-        elif i == 1 and the_panel.panel_type == 1:
-            switch = Switches.query.filter_by(channel=i+1, switch_panel_id=the_panel.id).first()
-        elif i == 2 and the_panel.panel_type == 0:
-            # TODO
+        elif (i == 1 and the_panel.panel_type == 1) or (i == 2 and the_panel.panel_type == 0):
+            room = Locators.query.filter(Locators.internal_code == the_panel.locator_id).first()
+            prev_eco = room.eco_mode
+            if prev_eco != value:
+                room.eco_mode = value
+                db.session.add(room)
             continue
         elif i == 3 and the_panel.panel_type == 0:
             switch = Switches.query.filter_by(channel=i + 1, switch_panel_id=the_panel.id).first()
         else:
-            switch = None
+            continue
 
         if switch is None or switch.status == value:
             continue
@@ -161,39 +129,7 @@ def handle_switch_signal(data, ip):
             db.session.rollback()
 
 
-        # if the_panel.panel_type == 0:
-        #     switch = Switches.query.filter_by(channel=i+1, switch_panel_id=the_panel.id).first()
-        #
-        #     # ===============================================
-        #     # set eco mode - xxx
-        #     # ===============================================
-        #     room_no_str = the_panel.locator_id
-        #     room = Locators.query.filter(Locators.internal_code == room_no_str).first()
-        #     prev_eco = room.eco_mode
-        #     # TODO check if it is which digit is for eco for 4 buttons panel
-        #     now_eco = data[-3]
-        #     if prev_eco != now_eco:
-        #         room.eco_mode = now_eco
-        #         db.session.add(room)
-        # else:
-        #     if i == 2 or i == 3:
-        #         continue
-        #     else:
-        #         switch = Switches.query.filter_by(channel=i+1, switch_panel_id=the_panel.id).first()
-        # if switch is None or switch.status == value:
-        #     continue
-        # for relay in relay.query.filter_by(switch_id=switch.id).order_by():
-        #     network_relay_control_sync.apply_async(args=[relay.id, value], queue='relay')
-        # switch.status = value
-        #
-        # try:
-        #     db.session.commit()
-        # except:
-        #     L.exception('db commit failure')
-        #     db.session.rollback()
-
-
-def client_recv(ip, port, use_for):
+def client_recv(ip, port):
     L.info(f'ip {ip} start to recv data......')
     recv_data = bytearray()
     while True:
@@ -235,8 +171,8 @@ def configure_workers(sender=None, **kwargs):
         # ir = session.query(IRSensors).filter(IRSensors.tcp_config.has(ip=addr[0])).first()
         tcp_client(addr[0], int(addr[1]), block=False)
         # use_for = 'ir' if ir else 'panel'
-        thread = Thread(target=client_recv, args=(addr[0], int(addr[1]), 'panel'))
-        thread_ka = Thread(target=keep_alive, args=(addr[0], int(addr[1]), 'panel'))
+        thread = Thread(target=client_recv, args=(addr[0], int(addr[1])))
+        thread_ka = Thread(target=keep_alive, args=(addr[0],))
         thread.daemon = True
         thread_ka.daemon = True
         thread.start()
