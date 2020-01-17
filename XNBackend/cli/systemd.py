@@ -33,5 +33,4 @@ def control(code):
         addr = ip + ':' + '4196'
         click.echo('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
         os.system('sudo systemctl {0} xn-sensor@{1}.service'.format(code, addr))
-        time.sleep(5)
 

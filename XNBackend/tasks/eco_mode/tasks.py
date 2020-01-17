@@ -15,11 +15,13 @@ R = redis.Redis(host=celery.flask_app.config['REDIS_HOST'],
 
 def execute_eco(room_no: str):
     sp = SwitchPanel.query.filter(SwitchPanel.locator_id == room_no).first()
-    if not sp:
-        L.error(f'can not find sp for room {room_no}')
+    if not sp or not sp.tcp_config:
+        L.error(f'can not find sp for room {room_no}, {sp}')
+        return
     tcp_conn = get_socket_client(sp.tcp_config.ip, sp.tcp_config.port, 5)
     if not tcp_conn:
         L.error(f'failed to get tcp connection, ip: {sp.tcp_config.ip}')
+        return
     time.sleep(0.5)
     if is_work_time():
         sp_control_light(tcp_conn, sp, 0)
@@ -37,7 +39,7 @@ def execute_eco(room_no: str):
 
 @celery.task
 def eco_check():
-    eco_rooms = Locators.query.filter(Locators.eco_mode == 1).filter(Locators.internal_code == '501').all()
+    eco_rooms = Locators.query.filter(Locators.eco_mode == 1).all()
     for eco_room in eco_rooms:
         room_no_str = eco_room.internal_code
         value = get_redis_value(R, 'IR_' + room_no_str)

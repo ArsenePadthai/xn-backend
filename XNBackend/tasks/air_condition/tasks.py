@@ -40,9 +40,6 @@ def periodic_query_air_condition():
         db.session.rollback()
         L.exception(e)
 
-    else:
-        L.error(f'Fail to get ac data reason{all_data["errMsg"]}')
-
 
 @celery.task()
 def send_cmd_to_air_condition(device_index_code: str, **kwarg):

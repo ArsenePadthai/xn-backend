@@ -21,7 +21,7 @@ L = logging.getLogger(__name__)
 def is_work_begin_time():
     now = datetime.now()
     start = now.replace(hour=8, minute=0, second=0)
-    end = now.replace(hour=9, minute=30, second=0)
+    end = now.replace(hour=9, minute=0, second=0)
     return start <= now <= end
 
 
@@ -33,17 +33,21 @@ def turn_on_room_light(room_str):
         L.error(f'room {room_str} has no sp.')
         return
     sw = Switches.query.filter(Switches.switch_panel_id == sp.id).filter(Switches.channel == 1).first()
-    if sw and sw.status == 1:
-        L.debug('already on==========')
+    if not sw:
         return
-    ip = sp.tcp_config.ip
-    port = 4196
-    tcp_conn = get_socket_client(ip, port, timeout=5)
-    if not tcp_conn:
-        L.error(f'can not build connection to zlan ip {ip}')
-        return
-    sp_control_light(tcp_conn, sp, main=1)
-    close_conn(tcp_conn)
+    else:
+        if sw.status == 1:
+            return
+        try:
+            ip = sp.tcp_config.ip
+        except:
+            return
+        tcp_conn = get_socket_client(ip, 4196, timeout=5)
+        if not tcp_conn:
+            L.error(f'can not build connection to zlan ip {ip}')
+            return
+        sp_control_light(tcp_conn, sp, main=1)
+        close_conn(tcp_conn)
 
 
 # def update_aqi_ir_task(tcp_obj, sensor_list: list, redis_conn):
@@ -101,11 +105,12 @@ def periodic_update_aqi_ir_value():
     sensor_collection = {}
     f5_aqi_sensors = AQISensors.query.filter(AQISensors.locator_body.has(floor=5)).all()
     # f3_aqi_sensors = AQISensors.query.filter(AQISensors.locator_body.has(floor=3)).all()
-    ir_sensors = IRSensors.query.filter(IRSensors.locator_body.has(floor=5)).all()
+    ir_sensors_5 = IRSensors.query.filter(IRSensors.locator_body.has(floor=5)).all()
+    ir_sensors_3 = IRSensors.query.filter(IRSensors.locator_body.has(floor=3)).all()
     R = redis.Redis(host=celery.flask_app.config['REDIS_HOST'],
                     port=celery.flask_app.config['REDIS_PORT'])
-    # for sensor in f5_aqi_sensors + f3_aqi_sensors + ir_sensors:
-    for sensor in f5_aqi_sensors + ir_sensors:
+    for sensor in f5_aqi_sensors + ir_sensors_5 + ir_sensors_3:
+    # for sensor in f5_aqi_sensors + ir_sensors:
         if sensor.tcp_config not in sensor_collection:
             sensor_collection[sensor.tcp_config] = [sensor]
         else:
